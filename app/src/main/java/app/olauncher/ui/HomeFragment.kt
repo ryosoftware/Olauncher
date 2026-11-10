@@ -30,6 +30,10 @@ import app.olauncher.data.AppModel
 import app.olauncher.data.Constants
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentHomeBinding
+import app.olauncher.folders.ARG_FOLDER_EXTERNAL
+import app.olauncher.folders.ARG_FOLDER_ID
+import app.olauncher.folders.FolderRepository
+import app.olauncher.folders.isFolderMarker
 import app.olauncher.helper.appUsagePermissionGranted
 import app.olauncher.helper.dpToPx
 import app.olauncher.helper.expandNotificationDrawer
@@ -53,6 +57,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     private lateinit var prefs: Prefs
     private lateinit var viewModel: MainViewModel
     private lateinit var deviceManager: DevicePolicyManager
+    private lateinit var folderRepository: FolderRepository
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
@@ -65,6 +70,7 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         prefs = Prefs(requireContext())
+        folderRepository = FolderRepository(requireContext())
         viewModel = activity?.run {
             ViewModelProvider(this)[MainViewModel::class.java]
         } ?: throw Exception("Invalid Activity")
@@ -387,6 +393,16 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         isShortcut: Boolean,
         shortcutId: String?,
     ): Boolean {
+        if (isFolderMarker(packageName)) {
+            val name = folderRepository.folderName(packageName)
+            if (name == null) {
+                textView.text = ""
+                return false
+            }
+            textView.text = name
+            return true
+        }
+
         // Get user handle for the app/shortcut
         val userHandle = getUserHandleFromString(requireContext(), userString)
 
@@ -445,6 +461,10 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
         userString: String,
         fallback: (() -> Unit)? = null,
     ) {
+        if (isFolderMarker(packageName)) {
+            openFolder(packageName)
+            return
+        }
         if (appName.isEmpty()) {
             showLongPressToast()
             return
@@ -465,6 +485,24 @@ class HomeFragment : BaseFragment(), View.OnClickListener, View.OnLongClickListe
             )
         } else {
             fallback?.invoke()
+        }
+    }
+
+    private fun openFolder(folderId: String) {
+        if (!folderRepository.folderExists(folderId)) {
+            requireContext().showToast(getString(R.string.folder_not_found))
+            return
+        }
+        viewModel.getAppList()
+        val args = bundleOf(
+            ARG_FOLDER_ID to folderId,
+            ARG_FOLDER_EXTERNAL to true,
+        )
+        try {
+            findNavController().navigate(R.id.action_mainFragment_to_appListFragment, args)
+        } catch (e: Exception) {
+            findNavController().navigate(R.id.appListFragment, args)
+            e.printStackTrace()
         }
     }
 
