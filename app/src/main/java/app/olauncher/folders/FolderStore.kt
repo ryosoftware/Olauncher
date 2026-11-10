@@ -122,6 +122,20 @@ class FolderStore(snapshot: Snapshot = Snapshot()) {
         return names.joinToString(separator)
     }
 
+    /** Cadena de ids desde la carpeta raíz hasta [folderId], incluida. */
+    fun ancestorIds(folderId: String): List<String> {
+        if (folderId !in folders) return emptyList()
+        val chain = ArrayDeque<String>()
+        val seen = HashSet<String>()
+        var current: String? = folderId
+        while (current != null && seen.add(current)) {
+            val folder = folders[current] ?: break
+            chain.addFirst(current)
+            current = folder.parentId
+        }
+        return chain.toList()
+    }
+
     /**
      * Primera carpeta con ese nombre en el nivel indicado. [parentId] `null` significa raíz del
      * App Drawer. La comparación ignora mayúsculas/minúsculas y acentos.
@@ -181,6 +195,19 @@ class FolderStore(snapshot: Snapshot = Snapshot()) {
 
         folder.children.add(itemId)
         return AddResult.ADDED
+    }
+
+    /**
+     * Añade un elemento aplicando la política de duplicados. Las carpetas siempre se mueven; las
+     * aplicaciones y los pinned-shortcuts se retiran de sus otras carpetas cuando
+     * [allowDuplicateItems] es `false`.
+     */
+    fun addItem(folderId: String, itemId: String, allowDuplicateItems: Boolean): AddResult {
+        if (folderId !in folders) return AddResult.FOLDER_NOT_FOUND
+        if (!allowDuplicateItems && itemId !in folders) {
+            removeItemFromAllFolders(itemId, exceptFolderId = folderId)
+        }
+        return addToFolder(folderId, itemId)
     }
 
     /** Referencia externa: raíz del App Drawer, escritorio o deslizamiento. */
@@ -244,7 +271,8 @@ class FolderStore(snapshot: Snapshot = Snapshot()) {
      * elimina definitivamente.
      */
     fun removeExternalRef(location: String, folderId: String): Boolean {
-        if (!externalRefs.remove(ExternalRef(location, folderId))) return false
+        val removed = externalRefs.removeAll { it.location == location && it.folderId == folderId }
+        if (!removed) return false
         releaseIfUnreferenced(folderId)
         return true
     }
@@ -279,7 +307,7 @@ class FolderStore(snapshot: Snapshot = Snapshot()) {
     private fun detachFromCurrentLocation(folder: Folder) {
         folder.parentId?.let { parentId -> folders[parentId]?.children?.remove(folder.id) }
         folder.parentId = null
-        externalRefs.remove(ExternalRef(LOCATION_DRAWER, folder.id))
+        externalRefs.removeAll { it.location == LOCATION_DRAWER && it.folderId == folder.id }
     }
 
     /**

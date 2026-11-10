@@ -43,14 +43,32 @@ class FolderRepository(context: Context) {
 
     fun snapshot(): FolderStore = load()
 
-    fun renameFolder(folderId: String, name: String): Boolean =
-        edit { it.renameFolder(folderId, name) }
+    fun renameFolder(folderId: String, name: String): Boolean = edit { store ->
+        val parentId = store.parentOf(folderId)
+        val duplicate = store.findFolderByName(parentId, name)
+        if (duplicate != null && duplicate != folderId) return@edit false
+        store.renameFolder(folderId, name)
+    }
 
     fun createFolder(name: String): String = edit { it.createFolder(name) }
 
     /** Devuelve la carpeta de la raíz con ese nombre o la crea si no existe. */
     fun findOrCreateRootFolder(name: String): String = edit { store ->
         store.findFolderByName(parentId = null, name = name) ?: store.createFolder(name)
+    }
+
+    /**
+     * Crea una carpeta en la raíz (o reutiliza la existente con ese nombre) y añade el elemento en
+     * una sola operación. Si la creación fuese nueva y el alta fallara, la carpeta se revierte.
+     */
+    fun createRootFolderAndAddItem(name: String, itemId: String): FolderStore.AddResult = edit { store ->
+        val existing = store.findFolderByName(parentId = null, name = name)
+        val folderId = existing ?: store.createFolder(name)
+        val result = store.addItem(folderId, itemId, allowDuplicateItems)
+        if (existing == null && result != FolderStore.AddResult.ADDED) {
+            store.removeExternalRef(FolderStore.LOCATION_DRAWER, folderId)
+        }
+        result
     }
 
     fun folderExists(folderId: String): Boolean = load().isFolderId(folderId)
@@ -60,6 +78,27 @@ class FolderRepository(context: Context) {
     fun folderPath(folderId: String): String? = load().path(folderId)
 
     fun rootFolderIds(): List<String> = load().rootFolderIds()
+
+    /**
+     * Destinos válidos para el selector: todas las carpetas con su ruta completa, excluyendo la
+     * propia carpeta y sus descendientes cuando el elemento que se mueve es una carpeta.
+     */
+    fun destinationsFor(itemId: String): List<FolderDestination> {
+        val store = load()
+        val movingFolderId = itemId.takeIf { store.isFolderId(it) }
+        return store.folderIds()
+            .asSequence()
+            .filter { id ->
+                when {
+                    movingFolderId == null -> true
+                    id == movingFolderId -> false
+                    else -> !store.isDescendant(id, movingFolderId)
+                }
+            }
+            .mapNotNull { id -> store.path(id)?.let { FolderDestination(id, it) } }
+            .sortedBy { FolderText.normalize(it.path) }
+            .toList()
+    }
 
     fun childrenOf(folderId: String): List<String> = load().childrenOf(folderId)
 
@@ -73,10 +112,7 @@ class FolderRepository(context: Context) {
      * se mueven, nunca se duplican.
      */
     fun addItemToFolder(folderId: String, itemId: String): FolderStore.AddResult = edit { store ->
-        if (!allowDuplicateItems && !store.isFolderId(itemId)) {
-            store.removeItemFromAllFolders(itemId, exceptFolderId = folderId)
-        }
-        store.addToFolder(folderId, itemId)
+        store.addItem(folderId, itemId, allowDuplicateItems)
     }
 
     fun removeItemFromFolder(folderId: String, itemId: String): Boolean =

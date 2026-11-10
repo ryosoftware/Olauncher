@@ -71,6 +71,46 @@ class FolderStoreTest {
     }
 
     @Test
+    fun `con duplicados desactivados la app se mueve entre carpetas`() {
+        val store = FolderStore()
+        val f1 = store.createFolder("F1")
+        val f2 = store.createFolder("F2")
+        store.addItem(f1, appA, allowDuplicateItems = false)
+
+        assertEquals(FolderStore.AddResult.ADDED, store.addItem(f2, appA, allowDuplicateItems = false))
+
+        assertEquals(listOf(f2), store.containingFolders(appA))
+        assertTrue(store.childrenOf(f1).isEmpty())
+    }
+
+    @Test
+    fun `con duplicados activados la app permanece en ambas carpetas`() {
+        val store = FolderStore()
+        val f1 = store.createFolder("F1")
+        val f2 = store.createFolder("F2")
+        store.addItem(f1, appA, allowDuplicateItems = true)
+
+        assertEquals(FolderStore.AddResult.ADDED, store.addItem(f2, appA, allowDuplicateItems = true))
+
+        assertEquals(setOf(f1, f2), store.containingFolders(appA).toSet())
+    }
+
+    @Test
+    fun `una carpeta siempre se mueve aunque los duplicados esten activados`() {
+        val store = FolderStore()
+        val p1 = store.createFolder("P1")
+        val p2 = store.createFolder("P2")
+        val child = store.createFolder("C")
+
+        assertEquals(FolderStore.AddResult.ADDED, store.addItem(p1, child, allowDuplicateItems = true))
+        assertEquals(FolderStore.AddResult.ADDED, store.addItem(p2, child, allowDuplicateItems = true))
+
+        assertEquals(p2, store.parentOf(child))
+        assertTrue(store.isFolderId(child))
+        assertEquals(1, store.referenceCount(child))
+    }
+
+    @Test
     fun `removeItemFromAllFolders respeta la carpeta exceptuada`() {
         val store = FolderStore()
         val f1 = store.createFolder("F1")
@@ -153,6 +193,20 @@ class FolderStoreTest {
         assertEquals(FolderStore.AddResult.WOULD_CREATE_CYCLE, store.addToFolder(b, a))
         assertTrue(store.canMove(c, a)) // subir una carpeta a un ancestro es válido
         assertFalse(store.canMove(a, c)) // mover un ancestro a su descendiente crea un ciclo
+    }
+
+    @Test
+    fun `ancestorIds devuelve la cadena completa desde la raiz`() {
+        val store = FolderStore()
+        val a = store.createFolder("A")
+        val b = store.createFolder("B")
+        val c = store.createFolder("C")
+        store.addToFolder(a, b)
+        store.addToFolder(b, c)
+
+        assertEquals(listOf(a, b, c), store.ancestorIds(c))
+        assertEquals(listOf(a), store.ancestorIds(a))
+        assertTrue(store.ancestorIds("folder:missing").isEmpty())
     }
 
     @Test

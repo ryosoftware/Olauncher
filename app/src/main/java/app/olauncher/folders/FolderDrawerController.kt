@@ -30,6 +30,8 @@ class FolderDrawerController(context: Context) {
 
     fun reload() {
         store = repository.load()
+        while (stack.isNotEmpty() && store.folderName(stack.last()) == null) stack.removeLast()
+        if (stack.isEmpty()) openedExternally = false
     }
 
     /** Abre [folderId]. [external] indica escritorio o deslizamiento. */
@@ -64,7 +66,51 @@ class FolderDrawerController(context: Context) {
         openedExternally = false
     }
 
-    fun path(): String? = currentFolderId?.let { store.path(it) }
+    /** Reabre la ruta completa hasta [folderId], p. ej. al volver del selector de carpetas. */
+    fun openPathTo(folderId: String) {
+        reload()
+        val chain = store.ancestorIds(folderId)
+        stack.clear()
+        openedExternally = false
+        chain.forEach { stack.addLast(it) }
+    }
+
+    /** Nombre de la carpeta abierta, o `null` en la raíz del App Drawer. */
+    fun currentFolderName(): String? = currentFolderId?.let { store.folderName(it) }
+
+    fun addItemToFolder(folderId: String, itemId: String): FolderStore.AddResult {
+        val result = repository.addItemToFolder(folderId, itemId)
+        reload()
+        return result
+    }
+
+    fun createRootFolderAndAdd(name: String, itemId: String): FolderStore.AddResult {
+        val result = repository.createRootFolderAndAddItem(name, itemId)
+        reload()
+        return result
+    }
+
+    fun renameFolder(folderId: String, name: String): Boolean {
+        val result = repository.renameFolder(folderId, name)
+        reload()
+        return result
+    }
+
+    fun removeFromCurrentFolder(appModel: AppModel): Boolean {
+        val folderId = currentFolderId ?: return false
+        val itemId = itemIdOf(appModel) ?: return false
+        val result = repository.removeItemFromFolder(folderId, itemId)
+        reload()
+        return result
+    }
+
+    fun removeFolderFromDrawer(appModel: AppModel): Boolean {
+        val folderId = appModel.appPackage
+        if (!isFolderMarker(folderId)) return false
+        val result = repository.removeFolderFromDrawer(folderId)
+        reload()
+        return result
+    }
 
     /**
      * Lista visible: raíz decorada con carpetas o contenido de la carpeta actual.

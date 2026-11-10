@@ -40,7 +40,19 @@
             app:popExitAnim="@anim/fade_exit"
             app:popUpTo="@+id/appListFragment"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_appListFragment_to_folderPickerFragment"
+            app:destination="@id/folderPickerFragment"
+            app:enterAnim="@anim/fade_enter"
+            app:exitAnim="@anim/slide_out_top"
+            app:popEnterAnim="@anim/slide_in_top"
+            app:popExitAnim="@anim/fade_exit" />
     </fragment>
+    <fragment
+        android:id="@+id/folderPickerFragment"
+        android:name="app.olauncher.folders.FolderPickerFragment"
+        android:label="folder_picker_fragment"
+        tools:layout="@layout/fragment_app_drawer" />
     <fragment
         android:id="@+id/settingsFragment"
         android:name="app.olauncher.ui.SettingsFragment"

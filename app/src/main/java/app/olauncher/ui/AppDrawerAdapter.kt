@@ -64,6 +64,8 @@ class AppDrawerAdapter(
     private var isBangSearch = false
     private var autoLaunchedQuery: String? = null
     var allowAutoLaunch = true
+    var folderContext = false
+    var onFolderAction: (AppModel) -> Unit = {}
     private val appFilter = createAppFilter()
     private val myUserHandle = android.os.Process.myUserHandle()
 
@@ -119,7 +121,9 @@ class AppDrawerAdapter(
                     appDeleteListener,
                     appInfoListener,
                     appHideListener,
-                    appRenameListener
+                    appRenameListener,
+                    onFolderAction,
+                    { folderContext },
                 )
             }
         } catch (e: Exception) {
@@ -232,8 +236,11 @@ class AppDrawerAdapter(
             appInfoListener: (AppModel) -> Unit,
             appHideListener: (AppModel, Int) -> Unit,
             appRenameListener: (AppModel, String) -> Unit,
+            appFolderListener: (AppModel) -> Unit,
+            isFolderContext: () -> Boolean,
         ) = with(binding) {
             val isFolder = isFolderMarker(appModel.appPackage)
+            val hasActions = appModel.appPackage.isNotEmpty()
             appHideLayout.visibility = View.GONE
             renameLayout.visibility = View.GONE
             appTitle.visibility = View.VISIBLE
@@ -256,8 +263,14 @@ class AppDrawerAdapter(
             appTitle.setOnClickListener { clickListener(appModel) }
 
             appTitle.setOnLongClickListener {
-                // Las acciones contextuales de carpeta se incorporan en la siguiente fase
-                if (appModel.appPackage.isNotEmpty() && !isFolder) {
+                // En modo selección las carpetas solo sirven como destino, sin menú propio
+                val canShowMenu = hasActions && (!isFolder || flag == Constants.FLAG_LAUNCH_APP)
+                if (canShowMenu) {
+                    val inFolder = isFolderContext()
+                    appDelete.isVisible = !isFolder
+                    appInfo.isVisible = !isFolder
+                    // Añadir a carpeta solo tiene sentido en el App Drawer real
+                    appFolder.isVisible = flag == Constants.FLAG_LAUNCH_APP
                     appDelete.alpha = when (
                         appModel is AppModel.PinnedShortcut || !root.context.isSystemApp(appModel.appPackage, appModel.user)
                     ) {
@@ -268,12 +281,16 @@ class AppDrawerAdapter(
                         root.context.getString(R.string.remove)
                     else
                         root.context.getString(R.string.delete)
-                    appHide.text = if (flag == Constants.FLAG_HIDDEN_APPS)
-                        root.context.getString(R.string.adapter_show)
-                    else
-                        root.context.getString(R.string.adapter_hide)
+                    appHide.text = when {
+                        flag == Constants.FLAG_HIDDEN_APPS ->
+                            root.context.getString(R.string.adapter_show)
+
+                        inFolder -> root.context.getString(R.string.remove_from_folder)
+                        else -> root.context.getString(R.string.adapter_hide)
+                    }
                     appTitle.visibility = View.INVISIBLE
-                    appHide.alpha = when (appModel is AppModel.PinnedShortcut) {
+                    // Ocultar un acceso directo no está soportado, pero quitarlo de una carpeta sí
+                    appHide.alpha = when (appModel is AppModel.PinnedShortcut && !inFolder) {
                         true -> 0.5f
                         false -> 1.0f
                     }
@@ -286,8 +303,9 @@ class AppDrawerAdapter(
 
             // Configure rename behavior
             appRename.setOnClickListener {
-                if (appModel.appPackage.isNotEmpty()) {
-                    etAppRename.hint = getAppName(etAppRename.context, appModel.appPackage, appModel.user)
+                if (hasActions) {
+                    etAppRename.hint = if (isFolder) ""
+                    else getAppName(etAppRename.context, appModel.appPackage, appModel.user)
                     etAppRename.setText(appModel.appLabel)
                     etAppRename.setSelectAllOnFocus(true)
                     renameLayout.visibility = View.VISIBLE
@@ -301,7 +319,8 @@ class AppDrawerAdapter(
             }
             etAppRename.addTextChangedListener(object : TextWatcher {
                 override fun afterTextChanged(s: Editable?) {
-                    etAppRename.hint = getAppName(etAppRename.context, appModel.appPackage, appModel.user)
+                    etAppRename.hint = if (isFolder) ""
+                    else getAppName(etAppRename.context, appModel.appPackage, appModel.user)
                 }
 
                 override fun beforeTextChanged(
@@ -319,7 +338,7 @@ class AppDrawerAdapter(
             etAppRename.setOnEditorActionListener { _, actionCode, _ ->
                 if (actionCode == EditorInfo.IME_ACTION_DONE) {
                     val renameLabel = etAppRename.text.toString().trim()
-                    if (renameLabel.isNotBlank() && appModel.appPackage.isNotBlank()) {
+                    if (renameLabel.isNotBlank() && hasActions) {
                         appRenameListener(appModel, renameLabel)
                         renameLayout.visibility = View.GONE
                     }
@@ -330,8 +349,11 @@ class AppDrawerAdapter(
             tvSaveRename.setOnClickListener {
                 etAppRename.hideKeyboard()
                 val renameLabel = etAppRename.text.toString().trim()
-                if (renameLabel.isNotBlank() && appModel.appPackage.isNotBlank()) {
+                if (renameLabel.isNotBlank() && hasActions) {
                     appRenameListener(appModel, renameLabel)
+                    renameLayout.visibility = View.GONE
+                } else if (isFolder) {
+                    // El nombre de una carpeta no puede quedar vacío: se conserva el actual
                     renameLayout.visibility = View.GONE
                 } else {
                     appRenameListener(
@@ -352,6 +374,11 @@ class AppDrawerAdapter(
                 appTitle.visibility = View.VISIBLE
             }
             appHide.setOnClickListener { appHideListener(appModel, bindingAdapterPosition) }
+            appFolder.setOnClickListener {
+                appHideLayout.visibility = View.GONE
+                appTitle.visibility = View.VISIBLE
+                appFolderListener(appModel)
+            }
         }
 
         private fun getAppName(context: Context, appPackage: String, user: UserHandle): String {

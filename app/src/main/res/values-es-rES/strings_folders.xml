@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="folder">Carpeta</string>
+    <string name="add_to_folder">Añadir a carpeta</string>
+    <string name="new_folder">Nueva carpeta</string>
+    <string name="folder_name">Nombre de la carpeta</string>
+    <string name="folder_name_required">Introduce un nombre para la carpeta</string>
+    <string name="folder_name_exists">Ya existe una carpeta con ese nombre en este nivel</string>
+    <string name="folder_move_failed">No se puede mover la carpeta ahí</string>
+    <string name="remove_from_folder">Quitar</string>
+    <string name="create">Crear</string>
+</resources>
