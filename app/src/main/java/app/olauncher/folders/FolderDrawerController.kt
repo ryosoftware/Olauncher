@@ -16,6 +16,7 @@ import java.text.Collator
 class FolderDrawerController(context: Context) {
 
     private val repository = FolderRepository(context)
+    private val collator = Collator.getInstance()
     private var store = repository.load()
     private val stack = ArrayDeque<String>()
     private var openedExternally = false
@@ -138,8 +139,7 @@ class FolderDrawerController(context: Context) {
             visible.removeAll { item -> itemIdOf(item)?.let(store::containsItem) == true }
         }
 
-        val collator = Collator.getInstance()
-        val folderRows = store.rootFolderIds().mapNotNull { folderRow(it, collator) }
+        val folderRows = store.rootFolderIds().mapNotNull { folderRow(it) }
         if (folderRows.isEmpty()) return visible
 
         visible.addAll(folderRows)
@@ -159,9 +159,8 @@ class FolderDrawerController(context: Context) {
         val byId = HashMap<String, AppModel>()
         (apps + extraApps).forEach { item -> itemIdOf(item)?.let { byId[it] = item } }
 
-        val collator = Collator.getInstance()
         val items = store.childrenOf(folderId).mapNotNull { itemId ->
-            if (store.isFolderId(itemId)) folderRow(itemId, collator) else byId[itemId]
+            if (store.isFolderId(itemId)) folderRow(itemId) else byId[itemId]
         }
         return FolderSort.sorted(
             items = items,
@@ -171,7 +170,7 @@ class FolderDrawerController(context: Context) {
         ).toMutableList()
     }
 
-    private fun folderRow(folderId: String, collator: Collator): AppModel.App? {
+    private fun folderRow(folderId: String): AppModel.App? {
         val name = store.folderName(folderId) ?: return null
         return AppModel.App(
             appLabel = name,
