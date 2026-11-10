@@ -12,6 +12,7 @@ import android.view.animation.AnimationUtils
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -24,6 +25,9 @@ import app.olauncher.data.AppModel
 import app.olauncher.data.Constants
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.FragmentAppDrawerBinding
+import app.olauncher.folders.ARG_FOLDER_EXTERNAL
+import app.olauncher.folders.ARG_FOLDER_ID
+import app.olauncher.folders.FolderDrawerController
 import app.olauncher.helper.deletePinnedShortcut
 import app.olauncher.helper.hideKeyboard
 import app.olauncher.helper.isEinkDisplay
@@ -41,6 +45,9 @@ class AppDrawerFragment : BaseFragment() {
     private lateinit var prefs: Prefs
     private lateinit var adapter: AppDrawerAdapter
     private lateinit var linearLayoutManager: LinearLayoutManager
+    private lateinit var folderController: FolderDrawerController
+    private var defaultQueryHint: CharSequence? = ""
+    private var folderBackCallback: OnBackPressedCallback? = null
     private var searchTextView: TextView? = null
     private var cachedIsCjkKeyboard: Boolean? = null
 
@@ -72,11 +79,22 @@ class AppDrawerFragment : BaseFragment() {
             canRename = it.getBoolean(Constants.Key.RENAME, false)
         }
 
+        folderController = FolderDrawerController(requireContext())
+        arguments?.getString(ARG_FOLDER_ID)?.let { folderId ->
+            folderController.open(
+                folderId,
+                external = arguments?.getBoolean(ARG_FOLDER_EXTERNAL, false) ?: false,
+            )
+        }
+
         initViews()
+        defaultQueryHint = binding.search.queryHint
+        updateSearchHint()
         initSearch()
         initAdapter()
         initObservers()
         initClickListeners()
+        registerFolderBackCallback()
     }
 
     private fun initViews() {
@@ -151,11 +169,15 @@ class AppDrawerFragment : BaseFragment() {
             flag,
             prefs.appLabelAlignment,
             appClickListener = { appModel ->
-                viewModel.selectedApp(appModel, flag)
-                if (flag == Constants.FLAG_LAUNCH_APP || flag == Constants.FLAG_HIDDEN_APPS)
-                    findNavController().popBackStack(R.id.mainFragment, false)
-                else
-                    closeDrawer()
+                if (flag == Constants.FLAG_LAUNCH_APP && folderController.openFolderRow(appModel)) {
+                    onFolderChanged()
+                } else {
+                    viewModel.selectedApp(appModel, flag)
+                    if (flag == Constants.FLAG_LAUNCH_APP || flag == Constants.FLAG_HIDDEN_APPS)
+                        findNavController().popBackStack(R.id.mainFragment, false)
+                    else
+                        closeDrawer()
+                }
             },
             appInfoListener = {
                 openAppInfo(
@@ -294,9 +316,14 @@ class AppDrawerFragment : BaseFragment() {
 
     private fun updateCombinedAppList() {
         val apps = currentAppList ?: return
-        val combined = apps.toMutableList()
+        val extraApps = if (flag == Constants.FLAG_LAUNCH_APP && !currentPrivateSpaceLocked)
+            currentPrivateSpaceApps.orEmpty() else emptyList()
+        val combined = folderController.visibleItems(apps, extraApps, flag)
 
-        if (flag == Constants.FLAG_LAUNCH_APP && currentPrivateSpaceAvailable) {
+        // El espacio privado solo se muestra en la raíz, no dentro de una carpeta
+        if (flag == Constants.FLAG_LAUNCH_APP && !folderController.isInsideFolder &&
+            currentPrivateSpaceAvailable
+        ) {
             combined.add(AppModel.PrivateSpaceHeader(isLocked = currentPrivateSpaceLocked))
             if (!currentPrivateSpaceLocked) {
                 currentPrivateSpaceApps?.let { combined.addAll(it) }
@@ -305,6 +332,33 @@ class AppDrawerFragment : BaseFragment() {
 
         adapter.setAppList(combined)
         adapter.filter.filter(binding.search.query)
+    }
+
+    private fun registerFolderBackCallback() {
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (folderController.goUp()) {
+                    onFolderChanged()
+                } else {
+                    isEnabled = false
+                    closeDrawer()
+                }
+            }
+        }
+        callback.isEnabled = folderController.canHandleBack()
+        folderBackCallback = callback
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, callback)
+    }
+
+    private fun onFolderChanged() {
+        binding.search.setQuery("", false)
+        updateSearchHint()
+        folderBackCallback?.isEnabled = folderController.canHandleBack()
+        updateCombinedAppList()
+    }
+
+    private fun updateSearchHint() {
+        binding.search.queryHint = folderController.path() ?: defaultQueryHint ?: ""
     }
 
     private fun initClickListeners() {
@@ -370,6 +424,11 @@ class AppDrawerFragment : BaseFragment() {
     override fun onStart() {
         super.onStart()
         cachedIsCjkKeyboard = null
+        folderController.reload()
+        if (folderController.isInsideFolder && folderController.path() == null) {
+            folderController.reset()
+            onFolderChanged()
+        }
         binding.search.showKeyboard(prefs.autoShowKeyboard)
     }
 
@@ -380,6 +439,8 @@ class AppDrawerFragment : BaseFragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        folderBackCallback?.isEnabled = false
+        folderBackCallback = null
         searchTextView = null
         _binding = null
     }

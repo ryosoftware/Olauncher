@@ -20,6 +20,7 @@ import app.olauncher.data.AppModel
 import app.olauncher.data.Constants
 import app.olauncher.databinding.AdapterAppDrawerBinding
 import app.olauncher.databinding.AdapterPrivateSpaceHeaderBinding
+import app.olauncher.folders.isFolderMarker
 import app.olauncher.helper.appLabelMatches
 import app.olauncher.helper.hideKeyboard
 import app.olauncher.helper.isSystemApp
@@ -168,6 +169,8 @@ class AppDrawerAdapter(
                 && flag == Constants.FLAG_LAUNCH_APP
                 && appFilteredList.isNotEmpty()
                 && appFilteredList[0] !is AppModel.PrivateSpaceHeader
+                // Entrar en una carpeta no es "lanzar": la autoapertura solo aplica a apps
+                && !isFolderMarker(appFilteredList[0].appPackage)
                 // Skip the empty bottom-padding item, left alone when the app list is empty
                 && appFilteredList[0].appPackage.isNotEmpty()
             ) {
@@ -230,6 +233,7 @@ class AppDrawerAdapter(
             appHideListener: (AppModel, Int) -> Unit,
             appRenameListener: (AppModel, String) -> Unit,
         ) = with(binding) {
+            val isFolder = isFolderMarker(appModel.appPackage)
             appHideLayout.visibility = View.GONE
             renameLayout.visibility = View.GONE
             appTitle.visibility = View.VISIBLE
@@ -240,12 +244,20 @@ class AppDrawerAdapter(
                 if (appModel.isNew) append(" ✦")
             }
             appTitle.gravity = appLabelGravity
+            // Indicador de carpeta alineado a la derecha de la fila
+            appTitle.setCompoundDrawablesWithIntrinsicBounds(
+                0,
+                0,
+                if (isFolder) R.drawable.ic_chevron_right else 0,
+                0,
+            )
             otherProfileIndicator.isVisible = appModel.user != myUserHandle
 
             appTitle.setOnClickListener { clickListener(appModel) }
 
             appTitle.setOnLongClickListener {
-                if (appModel.appPackage.isNotEmpty()) {
+                // Las acciones contextuales de carpeta se incorporan en la siguiente fase
+                if (appModel.appPackage.isNotEmpty() && !isFolder) {
                     appDelete.alpha = when (
                         appModel is AppModel.PinnedShortcut || !root.context.isSystemApp(appModel.appPackage, appModel.user)
                     ) {
