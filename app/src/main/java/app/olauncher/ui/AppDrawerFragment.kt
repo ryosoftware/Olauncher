@@ -57,6 +57,7 @@ class AppDrawerFragment : BaseFragment() {
     private lateinit var folderController: FolderDrawerController
     private var defaultQueryHint: CharSequence? = ""
     private var folderBackCallback: OnBackPressedCallback? = null
+    private var suppressQueryFilter = false
     private var searchTextView: TextView? = null
     private var cachedIsCjkKeyboard: Boolean? = null
 
@@ -135,6 +136,11 @@ class AppDrawerFragment : BaseFragment() {
 
             override fun onQueryTextChange(newText: String): Boolean {
                 try {
+                    if (suppressQueryFilter) {
+                        binding.appRename.visibility =
+                            if (canRename && newText.isNotBlank()) View.VISIBLE else View.GONE
+                        return true
+                    }
                     adapter.allowAutoLaunch = !isSearchComposing()
                     adapter.filter.filter(newText)
                     binding.appRename.visibility =
@@ -335,6 +341,8 @@ class AppDrawerFragment : BaseFragment() {
             viewModel.appList.observe(viewLifecycleOwner) {
                 currentAppList = it
                 updateCombinedAppList()
+                // Dentro de una carpeta la vista usa folderApps: hay que refrescarla también
+                if (folderController.isInsideFolder) loadFolderApps()
             }
             if (flag == Constants.FLAG_LAUNCH_APP) {
                 viewModel.privateSpaceAvailable.observe(viewLifecycleOwner) {
@@ -353,7 +361,7 @@ class AppDrawerFragment : BaseFragment() {
         }
     }
 
-    private fun updateCombinedAppList() {
+    private fun updateCombinedAppList(resetScroll: Boolean = false) {
         val apps = currentAppList ?: return
         val extraApps = if (flag == Constants.FLAG_LAUNCH_APP && !currentPrivateSpaceLocked)
             currentPrivateSpaceApps.orEmpty() else emptyList()
@@ -372,8 +380,14 @@ class AppDrawerFragment : BaseFragment() {
             }
         }
 
-        adapter.setAppList(combined)
-        adapter.filter.filter(binding.search.query)
+        if (resetScroll) {
+            // La navegación entre carpetas limpia la búsqueda: basta con una entrega y se
+            // desplaza cuando la nueva lista ya está comprometida.
+            adapter.setAppList(combined, Runnable { scrollListToTop() })
+        } else {
+            adapter.setAppList(combined)
+            adapter.filter.filter(binding.search.query)
+        }
     }
 
     private fun registerFolderBackCallback() {
@@ -394,14 +408,19 @@ class AppDrawerFragment : BaseFragment() {
 
     private fun onFolderChanged(resetScroll: Boolean = false) {
         adapter.folderContext = folderController.isInsideFolder
-        binding.search.setQuery("", false)
+        if (binding.search.query.isNotEmpty()) {
+            // Evita filtrar con la lista anterior mientras se limpia la búsqueda
+            suppressQueryFilter = true
+            binding.search.setQuery("", false)
+            suppressQueryFilter = false
+        }
         updateSearchHint()
         folderBackCallback?.isEnabled = folderController.canHandleBack()
-        updateCombinedAppList()
-        if (resetScroll) resetListToTop()
+        updateCombinedAppList(resetScroll)
     }
 
-    private fun resetListToTop() {
+    private fun scrollListToTop() {
+        if (_binding == null) return
         binding.recyclerView.stopScroll()
         linearLayoutManager.scrollToPositionWithOffset(0, 0)
         // La lista se actualiza de forma asíncrona: se repite en el siguiente frame

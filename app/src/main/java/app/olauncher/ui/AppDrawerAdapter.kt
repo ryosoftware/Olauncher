@@ -74,7 +74,7 @@ class AppDrawerAdapter(
     var appFilteredList: MutableList<AppModel> = mutableListOf()
 
     override fun getItemViewType(position: Int): Int {
-        return when (appFilteredList.getOrNull(position)) {
+        return when (currentList.getOrNull(position)) {
             is AppModel.PrivateSpaceHeader -> VIEW_TYPE_PRIVATE_HEADER
             else -> VIEW_TYPE_APP
         }
@@ -102,8 +102,8 @@ class AppDrawerAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         try {
-            if (appFilteredList.isEmpty() || position == RecyclerView.NO_POSITION) return
-            val appModel = appFilteredList[holder.bindingAdapterPosition]
+            if (position == RecyclerView.NO_POSITION) return
+            val appModel = currentList.getOrNull(position) ?: return
             when (holder) {
                 is PrivateSpaceHeaderViewHolder -> {
                     holder.bind(
@@ -188,7 +188,7 @@ class AppDrawerAdapter(
         }
     }
 
-    fun setAppList(appsList: MutableList<AppModel>) {
+    fun setAppList(appsList: MutableList<AppModel>, onCommitted: Runnable? = null) {
         // Add empty app for bottom padding in recyclerview and assign to list
         appsList.add(
             AppModel.App(
@@ -202,7 +202,7 @@ class AppDrawerAdapter(
         )
         this.appsList = appsList
         this.appFilteredList = appsList
-        submitList(appsList)
+        submitList(appsList, onCommitted)
     }
 
     fun launchFirstInList() {
