@@ -9,5 +9,6 @@
     <string name="folder_move_failed">Cannot move the folder there</string>
     <string name="remove_from_folder">Remove</string>
     <string name="create">Create</string>
+    <string name="folder_delete">Delete</string>
     <string name="folder_not_found">Folder not found</string>
 </resources>

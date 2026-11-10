@@ -78,6 +78,10 @@ class FolderDrawerController(context: Context) {
     /** Nombre de la carpeta abierta, o `null` en la raíz del App Drawer. */
     fun currentFolderName(): String? = currentFolderId?.let { store.folderName(it) }
 
+    /** `true` si al retirar la referencia actual la carpeta se eliminará definitivamente. */
+    fun folderWillBeDeleted(folderId: String): Boolean =
+        store.isFolderId(folderId) && store.referenceCount(folderId) <= 1
+
     fun addItemToFolder(folderId: String, itemId: String): FolderStore.AddResult {
         val result = repository.addItemToFolder(folderId, itemId)
         reload()

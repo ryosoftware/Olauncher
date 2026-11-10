@@ -290,6 +290,12 @@ class AppDrawerFragment : BaseFragment() {
         )
         adapter.folderContext = folderController.isInsideFolder
         adapter.onFolderAction = { openFolderPicker(it) }
+        adapter.folderRemoveLabel = { appModel ->
+            if (folderController.folderWillBeDeleted(appModel.appPackage))
+                R.string.folder_delete
+            else
+                R.string.remove_from_folder
+        }
 
         linearLayoutManager = object : LinearLayoutManager(requireContext()) {
             override fun scrollVerticallyBy(

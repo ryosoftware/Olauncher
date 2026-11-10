@@ -66,6 +66,7 @@ class AppDrawerAdapter(
     var allowAutoLaunch = true
     var folderContext = false
     var onFolderAction: (AppModel) -> Unit = {}
+    var folderRemoveLabel: (AppModel) -> Int = { R.string.remove_from_folder }
     private val appFilter = createAppFilter()
     private val myUserHandle = android.os.Process.myUserHandle()
 
@@ -124,6 +125,7 @@ class AppDrawerAdapter(
                     appRenameListener,
                     onFolderAction,
                     { folderContext },
+                    folderRemoveLabel,
                 )
             }
         } catch (e: Exception) {
@@ -238,6 +240,7 @@ class AppDrawerAdapter(
             appRenameListener: (AppModel, String) -> Unit,
             appFolderListener: (AppModel) -> Unit,
             isFolderContext: () -> Boolean,
+            folderRemoveLabel: (AppModel) -> Int,
         ) = with(binding) {
             val isFolder = isFolderMarker(appModel.appPackage)
             val hasActions = appModel.appPackage.isNotEmpty()
@@ -267,8 +270,12 @@ class AppDrawerAdapter(
                 val canShowMenu = hasActions && (!isFolder || flag == Constants.FLAG_LAUNCH_APP)
                 if (canShowMenu) {
                     val inFolder = isFolderContext()
-                    appDelete.isVisible = !isFolder
+                    val isShortcut = appModel is AppModel.PinnedShortcut
+                    // Un pinned-shortcut solo se desancla desde el App Drawer, no dentro de carpetas
+                    appDelete.isVisible = !isFolder && !(isShortcut && inFolder)
                     appInfo.isVisible = !isFolder
+                    // Ocultar un shortcut no está soportado: solo se muestra al retirarlo de una carpeta
+                    appHide.isVisible = !(isShortcut && !inFolder)
                     // Añadir a carpeta solo tiene sentido en el App Drawer real
                     appFolder.isVisible = flag == Constants.FLAG_LAUNCH_APP
                     appDelete.alpha = when (
@@ -281,19 +288,22 @@ class AppDrawerAdapter(
                         root.context.getString(R.string.remove)
                     else
                         root.context.getString(R.string.delete)
+                    val folderLabel = if (isFolder) folderRemoveLabel(appModel) else 0
                     appHide.text = when {
                         flag == Constants.FLAG_HIDDEN_APPS ->
                             root.context.getString(R.string.adapter_show)
 
+                        isFolder -> root.context.getString(folderLabel)
                         inFolder -> root.context.getString(R.string.remove_from_folder)
                         else -> root.context.getString(R.string.adapter_hide)
                     }
+                    val hideIcon = if (isFolder && folderLabel == R.string.folder_delete)
+                        R.drawable.ic_delete
+                    else
+                        R.drawable.ic_hide
+                    appHide.setCompoundDrawablesWithIntrinsicBounds(0, hideIcon, 0, 0)
                     appTitle.visibility = View.INVISIBLE
-                    // Ocultar un acceso directo no está soportado, pero quitarlo de una carpeta sí
-                    appHide.alpha = when (appModel is AppModel.PinnedShortcut && !inFolder) {
-                        true -> 0.5f
-                        false -> 1.0f
-                    }
+                    appHide.alpha = 1.0f
                     appHideLayout.visibility = View.VISIBLE
                     // Only allow renaming non hidden apps
                     appRename.isVisible = flag != Constants.FLAG_HIDDEN_APPS
