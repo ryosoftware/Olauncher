@@ -409,7 +409,8 @@ class AppDrawerFragment : BaseFragment() {
     }
 
     private fun onFolderChanged(resetScroll: Boolean = false) {
-        adapter.folderContext = folderController.isInsideFolder
+        val insideFolder = folderController.isInsideFolder
+        adapter.folderContext = insideFolder
         if (binding.search.query.isNotEmpty()) {
             // Evita filtrar con la lista anterior mientras se limpia la búsqueda
             suppressQueryFilter = true
@@ -419,6 +420,11 @@ class AppDrawerFragment : BaseFragment() {
         updateSearchHint()
         folderBackCallback?.isEnabled = folderController.canHandleBack()
         updateCombinedAppList(resetScroll)
+        if (insideFolder) {
+            binding.search.hideKeyboard()
+        } else if (resetScroll) {
+            binding.search.showKeyboard(prefs.autoShowKeyboard)
+        }
     }
 
     private fun scrollListToTop() {
@@ -456,6 +462,8 @@ class AppDrawerFragment : BaseFragment() {
     }
 
     private fun updateSearchHint() {
+        val insideFolder = folderController.isInsideFolder
+        binding.searchRow.visibility = if (insideFolder) View.GONE else View.VISIBLE
         val folderName = folderController.currentFolderName()
         if (folderName.isNullOrBlank()) {
             binding.folderPath.visibility = View.GONE
@@ -535,8 +543,12 @@ class AppDrawerFragment : BaseFragment() {
         updateSearchHint()
         folderBackCallback?.isEnabled = folderController.canHandleBack()
         updateCombinedAppList()
-        if (folderController.isInsideFolder) ensureHiddenAppsLoaded()
-        binding.search.showKeyboard(prefs.autoShowKeyboard)
+        if (folderController.isInsideFolder) {
+            ensureHiddenAppsLoaded()
+            binding.search.hideKeyboard()
+        } else {
+            binding.search.showKeyboard(prefs.autoShowKeyboard)
+        }
     }
 
     override fun onStop() {
