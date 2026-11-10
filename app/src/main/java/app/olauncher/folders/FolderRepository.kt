@@ -23,7 +23,7 @@ class FolderRepository(context: Context) {
         get() = settings.getBoolean(KEY_ALLOW_DUPLICATE_ITEMS, false)
 
     val showFoldersFirst: Boolean
-        get() = settings.getBoolean(KEY_SHOW_FOLDERS_FIRST, true)
+        get() = settings.getBoolean(KEY_SHOW_FOLDERS_FIRST, false)
 
     fun load(): FolderStore {
         val store = FolderStore(FolderStore.deserialize(settings.getString(KEY_FOLDERS_DATA, "")))
