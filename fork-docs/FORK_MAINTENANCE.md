@@ -1,0 +1,209 @@
+# Guía de mantenimiento del fork
+
+## 1. Objetivo
+
+Este documento describe las modificaciones propias introducidas en este fork de Olauncher respecto al repositorio original.
+
+Su objetivo es garantizar que:
+
+- Las funcionalidades añadidas se conserven al incorporar actualizaciones del repositorio original.
+- Los cambios realizados puedan entenderse sin depender de conversaciones anteriores con una IA.
+- Las modificaciones puedan reproducirse o adaptarse cuando sea necesario.
+- El fork permanezca lo más próximo posible al proyecto original.
+- El mantenimiento y la sincronización puedan realizarse de forma incremental.
+
+Este documento es una referencia técnica viva y debe actualizarse siempre que se añada, modifique o elimine una funcionalidad propia.
+
+## 2. Principios fundamentales de mantenimiento
+
+1. **Cambios mínimos:** modificar el menor número posible de archivos.
+2. **Compatibilidad con upstream:** conservar la arquitectura y el comportamiento originales siempre que sea posible.
+3. **Sin refactorizaciones innecesarias:** no reorganizar el código existente salvo que sea estrictamente necesario.
+4. **Separación de funcionalidades:** mantener las funcionalidades propias diferenciadas de las originales siempre que resulte práctico.
+5. **Reproducibilidad:** documentar suficientemente cada modificación importante para poder comprenderla y reproducirla.
+6. **Prevención de regresiones:** garantizar que las funcionalidades originales sigan funcionando.
+7. **Implementación incremental:** preferir cambios pequeños que puedan verificarse de forma independiente.
+8. **Documentación sincronizada:** la documentación debe reflejar siempre el estado real del código.
+
+## 3. Información del repositorio
+
+Datos comprobados en Git y en la configuración real del proyecto a 2026-11-10.
+
+| Propiedad | Valor |
+|---|---|
+| Proyecto original | Olauncher |
+| Repositorio original (upstream) | `https://github.com/tanujnotes/Olauncher.git` |
+| Repositorio del fork | Pendiente de publicar / URL no configurada |
+| Ruta local | `/home/roberto/pp/Olauncher` |
+| Rama principal de desarrollo | `master` |
+| Rama de upstream | `origin/master` (el remoto `origin` apunta a upstream) |
+| Commit original de referencia | `2606973` (v6.11.5) |
+| Último commit de upstream integrado | `2606973` (no se ha sincronizado nada posterior) |
+| Commit actual del fork | `0dc1c57` (más MOD-009 sin commit) |
+| Lenguaje principal | Kotlin |
+| Sistema de construcción | Gradle 8.9.1, Android Gradle Plugin 8.9.1 |
+| SDK | compileSdk 36, minSdk 24, targetSdk 36 |
+| Versión actual en el árbol de trabajo | versionCode 117, versionName `v6.11.5-1` (sin commit) |
+
+El fork está **9 commits por delante** de `2606973`. No existe remoto `upstream` separado; `origin` sigue apuntando al repositorio original.
+
+## 4. Resumen de funcionalidades propias
+
+| Funcionalidad | Estado | Documentación |
+|---|---|---|
+| Gestión avanzada de carpetas | Implementada; validación manual en curso | `../FOLDER_FEATURE.md` |
+
+Estados posibles: Planificada, En desarrollo, Implementada, Probada, Necesita adaptación, Obsoleta.
+
+## 5. Registro de modificaciones propias
+
+| ID | Modificación | Estado | Archivos principales | Commits |
+|---|---|---|---|---|
+| MOD-001 | Núcleo de datos y persistencia de carpetas | Implementada / probada | `folders/FolderStore.kt`, `FolderRepository.kt`, `FolderItem.kt`, `FolderContent.kt`, tests | `7a7eb43` |
+| MOD-002 | Visualización, ordenación y navegación en el App Drawer | Implementada / probada | `FolderDrawerController.kt`, `AppDrawerAdapter.kt`, `AppDrawerFragment.kt`, layouts, `nav_graph.xml` | `163128b` |
+| MOD-003 | Creación, selector, renombrado y retirada de carpetas | Implementada / probada | `FolderPickerFragment.kt`, `FolderPickerAdapter.kt`, `FolderDialogs.kt`, `FolderArgs.kt`, recursos | `095ba5c`, `2b6c64f` |
+| MOD-004 | Carpetas en escritorio y acciones de swipe | Implementada / probada | `HomeFragment.kt`, `FolderRepository.kt` | `452cd3d` |
+| MOD-005 | Correcciones de refresco, transición y scroll | Implementada / probada | `AppDrawerFragment.kt`, `AppDrawerAdapter.kt`, `adapter_app_drawer.xml` | `c55f5a9` |
+| MOD-006 | `showFoldersFirst` por defecto `false` | Decisión de producto | `FolderRepository.kt` | `dac1090` |
+| MOD-007 | Optimización del renderizado de contenido de carpetas | Probada por compilación; validación manual pendiente | `AppDrawerFragment.kt`, `FolderDrawerController.kt` | `6fc1019` |
+| MOD-008 | Ocultar el header del buscador dentro de carpetas | Implementada / probada por compilación | `AppDrawerFragment.kt`, `fragment_app_drawer.xml`, `layout-land/fragment_app_drawer.xml` | `0dc1c57` |
+| MOD-009 | Mover una carpeta anidada a la raíz desde el selector | Implementada; pendiente de commit | `FolderStore.kt`, `FolderRepository.kt`, `FolderPickerFragment.kt`, `FolderPickerAdapter.kt`, `strings_folders.xml` | Sin commit |
+
+### Detalles relevantes
+
+- **MOD-001:** jerarquía de un solo padre; contador de referencias derivado de padre/raíz, escritorio y swipe; serialización `folders-v1`; autocorrección de ciclos, huérfanas y referencias colgantes.
+- **MOD-002:** las carpetas se representan como `AppModel.App` con marcador `folder:<id>` para no modificar `AppModel` ni `DiffUtil`; pila de navegación en `FolderDrawerController`; el título muestra solo el nombre de la carpeta actual.
+- **MOD-003:** selector a pantalla completa con rutas completas y «New folder» al final; creación en raíz; reutilización de nombres duplicados por nivel; etiqueta dinámica Quitar/Borrar; el pinned-shortcut solo se desancla desde la raíz.
+- **MOD-004:** referencias de escritorio/swipe derivadas de los slots reales; apertura directa de la carpeta desde el App Drawer.
+- **MOD-005:** se refresca el contenido al cambiar nombres; se enlazan filas con la lista comprometida del adapter; el scroll se aplica tras el commit de la lista.
+- **MOD-006:** el fork usa por defecto orden mixto (`false`), mientras la especificación proponía `true`.
+- **MOD-007:** se elimina el escaneo completo de apps al abrir carpeta; se reutilizan `currentAppList` y `viewModel.hiddenApps`; se evita el filtro redundante y se cachea el `Collator`.
+- **MOD-008:** dentro de carpetas se oculta la fila del buscador/teclado para ganar altura; la búsqueda sigue disponible en la raíz y en el selector de carpetas. El nombre de la carpeta queda como título superior.
+- **MOD-009:** el selector muestra «Mover a la raíz» como primera fila solo cuando el elemento es una carpeta anidada. Reutiliza `moveFolder(id, null)`, que traspasa la pertenencia jerárquica de forma atómica. Si ya existe una carpeta homónima en la raíz, devuelve `NAME_CONFLICT` y no modifica nada. «New folder» sigue al final.
+
+## 6. Arquitectura y decisiones de implementación
+
+- **Separación por paquete:** toda la lógica nueva vive en `app/src/main/java/app/olauncher/folders/`.
+- **Un solo padre:** el padre se deriva de la lista de hijos. No se almacena un contador de referencias; se calcula a partir de padre existente y referencias externas. Es equivalente al contador persistente de la especificación y evita desincronización.
+- **Persistencia sin tocar `Prefs`:** `FolderRepository` usa el mismo `SharedPreferences` (`app.olauncher`) con claves propias: `FOLDERS_DATA`, `FOLDERS_ALLOW_DUPLICATE_ITEMS`, `FOLDERS_SHOW_FOLDERS_FIRST`.
+- **Referencias externas:** se reconstruyen en cada carga desde los slots reales de escritorio y swipe; las claves legacy no se usan.
+- **Representación de fila de carpeta:** `AppModel.App` con `appPackage = folder:<id>`. Se evita modificar `AppModel`, `DiffUtil`, `MainViewModel`, `Prefs` y otras clases originales.
+- **Navegación:** pila interna en el fragmento, con `OnBackPressedCallback`; al volver del selector se restaura la ruta mediante `savedStateHandle`.
+- **Contenido de carpeta:** se resuelve con `currentAppList + viewModel.hiddenApps`; no se vuelve a ejecutar `getAppsList` al abrir carpetas.
+- **Selector:** `FolderPickerFragment` reutiliza el layout visual del App Drawer; las rutas se muestran completas y se excluyen destinos que crearían ciclos.
+- **Búsqueda:** en raíz y selector; deshabilitada dentro de carpetas en MOD-008.
+- **Pinned-shortcuts:** Android solo muestra al launcher los shortcuts fijados por él mismo. Los fijados por otro launcher requieren volver a fijarse desde la app de origen.
+
+## 7. Inventario de archivos modificados
+
+Comprobado con `git diff 2606973..HEAD` y el árbol de trabajo.
+
+| Archivo | Funcionalidad | Motivo | Riesgo de conflicto |
+|---|---|---|---|
+| `app/src/main/java/app/olauncher/folders/` (10 archivos) | Carpetas | Lógica nueva aislada | Bajo |
+| `app/src/test/java/app/olauncher/folders/` (2 archivos) | Carpetas | Pruebas del modelo | Bajo |
+| `ui/AppDrawerAdapter.kt` | Carpetas | Indicador, acciones, etiquetas y enlace de filas | Alto |
+| `ui/AppDrawerFragment.kt` | Carpetas | Navegación, selector, teclado y refresco | Alto |
+| `ui/HomeFragment.kt` | Carpetas | Carpetas en escritorio y swipe | Medio |
+| `res/layout/adapter_app_drawer.xml` | Carpetas | Celda «Carpeta» | Medio |
+| `res/layout/fragment_app_drawer.xml` y `layout-land/...` | Carpetas | Título de carpeta y `searchRow` | Medio |
+| `res/navigation/nav_graph.xml` | Carpetas | Destino del selector | Medio |
+| `res/values/strings_folders.xml` y traducciones es | Carpetas | Cadenas nuevas | Bajo |
+| `res/drawable/ic_folder.xml`, `ic_chevron_right.xml` | Carpetas | Iconos | Bajo |
+| `res/layout/adapter_folder_picker_row.xml`, `dialog_folder_name.xml` | Carpetas | Selector y alta | Bajo |
+
+Cambios locales sin commit en el árbol de trabajo: MOD-009 (selector de «Mover a la raíz»), `.gitignore` y `app/build.gradle` (`versionName v6.11.5-1`).
+
+## 8. Pruebas y prevención de regresiones
+
+Comandos ejecutados:
+
+```bash
+./gradlew testDebugUnitTest
+./gradlew assembleDebug
+./gradlew assembleRelease
+./gradlew lintDebug
+```
+
+Resultados reales (2026-11-11, tras MOD-009):
+
+- `testDebugUnitTest`: **44 tests, BUILD SUCCESSFUL**. Incluyen jerarquía, ciclos, rutas, referencias, cascada, serialización, ordenación, política de duplicados y conflicto de nombre al mover a la raíz.
+- `assembleDebug` y `assembleRelease`: **BUILD SUCCESSFUL**.
+- `lintDebug`: 22 errores preexistentes (`NewApi`, `MissingTranslation` originales, `UnsafeImplicitIntentLaunch`). No hay hallazgos nuevos en el paquete de carpetas ni en MOD-009.
+
+Pruebas manuales realizadas durante el desarrollo:
+
+- Crear, abrir, anidar, renombrar y quitar carpetas.
+- Selector a pantalla completa con rutas y «New folder» al final.
+- Añadir apps y pinned-shortcuts; políticas de duplicados.
+- Carpetas en escritorio y swipe.
+- Etiquetas Quitar/Borrar y menú de shortcuts.
+- Persistencia y navegación Atrás.
+- Limitación observada: pinned-shortcuts fijados por otro launcher no son visibles para Olauncher.
+
+Pendiente de validación manual: comportamiento final de MOD-008 (header oculto en carpetas) y una pasada completa de aceptación.
+
+No existen pruebas instrumentadas en el proyecto.
+
+## 9. Instrucciones para agentes de IA
+
+Cualquier agente que trabaje en este repositorio debe:
+
+1. Leer este documento antes de modificar funcionalidades propias.
+2. Consultar `../FOLDER_FEATURE.md`.
+3. Inspeccionar la implementación real antes de hacer suposiciones.
+4. Comparar la implementación con el comportamiento documentado.
+5. Actualizar este documento después de cambios significativos.
+6. No asumir que propuestas anteriores coinciden con el código actual.
+7. No descartar modificaciones propias porque upstream haya implementado algo similar.
+8. Investigar si una implementación original puede sustituir o simplificar el código propio sin alterar el comportamiento requerido.
+9. No crear commits; los realiza exclusivamente el usuario.
+
+## 10. Historial de mantenimiento
+
+| Fecha | Modificación | Funcionalidad | Commit |
+|---|---|---|---|
+| 2026-11-10 | Núcleo de datos y pruebas | Carpetas | `7a7eb43` |
+| 2026-11-10 | Visualización y navegación | Carpetas | `163128b` |
+| 2026-11-10 | Creación, selector y acciones | Carpetas | `095ba5c` |
+| 2026-11-10 | Escritorio y swipe | Carpetas | `452cd3d` |
+| 2026-11-10 | Ajustes de retirada y shortcuts | Carpetas | `2b6c64f` |
+| 2026-11-10 | Correcciones de transición y refresco | Carpetas | `c55f5a9` |
+| 2026-11-10 | `showFoldersFirst=false` por defecto | Carpetas | `dac1090` |
+| 2026-11-10 | Optimización de renderizado de carpetas | Carpetas | `6fc1019` |
+| 2026-11-10 | Ocultar header del buscador en carpetas | Carpetas | `0dc1c57` |
+| 2026-11-10 | Documentación de estado actual | Infraestructura | Sin commit |
+| 2026-11-11 | Mover carpeta anidada a la raíz desde el selector | Carpetas | Sin commit |
+
+## 11. Problemas conocidos y deuda técnica
+
+- Lint mantiene 22 errores preexistentes ajenos a las carpetas.
+- `allowDuplicateItems` y `showFoldersFirst` no tienen interfaz de usuario, por especificación.
+- `showFoldersFirst` usa `false` por defecto en el fork; la especificación proponía `true`.
+- Dentro de carpetas no hay búsqueda desde MOD-008.
+- La pila de navegación de carpetas es interna al fragmento y no se conserva ante recreación por configuración.
+- Los pinned-shortcuts fijados por otro launcher no son visibles para Olauncher; hay que volver a fijarlos desde la app de origen.
+- La identidad de app dentro de carpetas es `package|user`, sin actividad; varias actividades del mismo paquete se colapsan.
+- Las referencias a apps desinstaladas o shortcuts desanclados se toleran y se ignoran hasta que vuelvan a existir.
+- Las cadenas nuevas de carpetas solo están traducidas a inglés y español; el resto usa inglés.
+- El código temporal de migración/exportación/importación fue eliminado.
+- No hay benchmark formal del renderizado de carpetas; la mejora se basa en eliminar el escaneo completo y las entregas duplicadas.
+
+## 12. Regla final de mantenimiento
+
+Este documento debe describir el estado real del repositorio, no una implementación prevista o hipotética.
+
+Cuando exista una discrepancia entre la documentación y el código, investigar su origen y actualizar la documentación únicamente después de determinar cuál es el comportamiento correcto.
+
+### Restricción sobre commits de Git
+
+La IA tiene prohibido crear commits, modificar commits existentes, hacer amend, rebase que reescriba commits o ejecutar cualquier operación que genere nuevos commits.
+
+- Todos los commits del repositorio los realiza exclusivamente el usuario humano.
+- La IA puede modificar archivos, ejecutar pruebas, revisar diferencias y preparar los cambios para que puedan ser confirmados.
+- Cuando considere que los cambios están listos para un commit, debe indicárselo expresamente al usuario.
+- Debe explicar brevemente qué cambios incluye ese posible commit y, si resulta útil, proponer un mensaje de commit.
+- La IA debe esperar a que el usuario realice el commit. No debe intentar hacerlo por su cuenta, aunque el usuario haya pedido implementar una funcionalidad completa.
+- Si necesita que el usuario haga un commit para poder continuar con seguridad, debe detenerse en ese punto, explicar el motivo y solicitarlo expresamente.
+
+Esta restricción prevalece sobre cualquier instrucción genérica que sugiera realizar commits automáticamente.
