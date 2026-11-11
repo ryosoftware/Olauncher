@@ -3,6 +3,7 @@
     <string name="folder">Folder</string>
     <string name="add_to_folder">Add to folder</string>
     <string name="new_folder">New folder</string>
+    <string name="move_to_root">Move to root</string>
     <string name="folder_name">Folder name</string>
     <string name="folder_name_required">Enter a folder name</string>
     <string name="folder_name_exists">A folder with that name already exists here</string>

@@ -174,8 +174,25 @@ class FolderStoreTest {
         assertEquals(FolderStore.MoveResult.MOVED, store.moveFolder(child, null))
 
         assertNull(store.parentOf(child))
+        assertTrue(store.childFolderIds(parent).isEmpty())
+        assertEquals(1, store.referenceCount(child))
         assertEquals(setOf(parent, child), store.rootFolderIds().toSet())
         assertEquals(FolderStore.MoveResult.ALREADY_IN_PLACE, store.moveFolder(child, null))
+    }
+
+    @Test
+    fun `no se mueve a la raiz si ya existe una carpeta homonima`() {
+        val store = FolderStore()
+        val parent = store.createFolder("P")
+        val child = store.createFolder("C")
+        store.addToFolder(parent, child)
+        val rootDuplicate = store.createFolder("c")
+
+        assertEquals(FolderStore.MoveResult.NAME_CONFLICT, store.moveFolder(child, null))
+
+        assertEquals(parent, store.parentOf(child))
+        assertEquals(listOf(child), store.childFolderIds(parent))
+        assertEquals(setOf(parent, rootDuplicate), store.rootFolderIds().toSet())
     }
 
     @Test

@@ -28,6 +28,7 @@ class FolderPickerFragment : BaseFragment() {
     private lateinit var adapter: FolderPickerAdapter
     private lateinit var itemId: String
     private var currentFolderId: String? = null
+    private var showMoveToRoot = false
     private var destinations: List<FolderDestination> = emptyList()
 
     override fun onCreateView(
@@ -48,6 +49,7 @@ class FolderPickerFragment : BaseFragment() {
             return
         }
         currentFolderId = arguments?.getString(ARG_PICKER_CURRENT_FOLDER)
+        showMoveToRoot = repository.isNestedFolder(itemId)
 
         requireActivity().onBackPressedDispatcher.addCallback(
             viewLifecycleOwner,
@@ -58,6 +60,7 @@ class FolderPickerFragment : BaseFragment() {
 
         adapter = FolderPickerAdapter(
             onFolderClick = { addToFolder(it.id) },
+            onMoveToRootClick = { moveToRoot() },
             onNewFolderClick = { showNewFolderDialog() },
         )
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -87,11 +90,27 @@ class FolderPickerFragment : BaseFragment() {
     private fun applyFilter(query: String) {
         val filtered = if (query.isBlank()) destinations
         else destinations.filter { appLabelMatches(it.path, query) }
-        adapter.submitDestinations(filtered)
+        adapter.submitDestinations(filtered, showMoveToRoot)
     }
 
     private fun addToFolder(folderId: String) {
         handleResult(repository.addItemToFolder(folderId, itemId))
+    }
+
+    private fun moveToRoot() {
+        when (repository.moveFolderToRoot(itemId)) {
+            FolderStore.MoveResult.NAME_CONFLICT -> {
+                requireContext().showToast(getString(R.string.folder_name_exists))
+                loadDestinations()
+            }
+
+            FolderStore.MoveResult.FOLDER_NOT_FOUND -> {
+                requireContext().showToast(getString(R.string.folder_move_failed))
+                loadDestinations()
+            }
+
+            else -> finishAndRestore()
+        }
     }
 
     private fun showNewFolderDialog() {

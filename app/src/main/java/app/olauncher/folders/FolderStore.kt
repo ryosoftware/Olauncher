@@ -46,7 +46,8 @@ class FolderStore(snapshot: Snapshot = Snapshot()) {
     enum class AddResult { ADDED, ALREADY_PRESENT, FOLDER_NOT_FOUND, WOULD_CREATE_CYCLE }
 
     enum class MoveResult {
-        MOVED, ALREADY_IN_PLACE, FOLDER_NOT_FOUND, PARENT_NOT_FOUND, WOULD_CREATE_CYCLE
+        MOVED, ALREADY_IN_PLACE, FOLDER_NOT_FOUND, PARENT_NOT_FOUND, WOULD_CREATE_CYCLE,
+        NAME_CONFLICT,
     }
 
     private val folders = LinkedHashMap<String, Folder>()
@@ -237,6 +238,9 @@ class FolderStore(snapshot: Snapshot = Snapshot()) {
             val alreadyRoot = folder.parentId == null &&
                     externalRefs.contains(ExternalRef(LOCATION_DRAWER, folderId))
             if (alreadyRoot) return MoveResult.ALREADY_IN_PLACE
+            if (findFolderByName(parentId = null, name = folder.name) != null) {
+                return MoveResult.NAME_CONFLICT
+            }
             detachFromCurrentLocation(folder)
             externalRefs.add(ExternalRef(LOCATION_DRAWER, folderId))
             return MoveResult.MOVED

@@ -127,6 +127,18 @@ class FolderRepository(context: Context) {
     fun moveFolder(folderId: String, newParentId: String?): FolderStore.MoveResult =
         edit { it.moveFolder(folderId, newParentId) }
 
+    /** `true` si [itemId] es una carpeta que está dentro de otra carpeta. */
+    fun isNestedFolder(itemId: String): Boolean = load().let { store ->
+        store.isFolderId(itemId) && store.parentOf(itemId) != null
+    }
+
+    /**
+     * Mueve una carpeta a la raíz del App Drawer. No se permite si ya existe otra carpeta
+     * homónima en la raíz, para respetar los nombres únicos por nivel.
+     */
+    fun moveFolderToRoot(folderId: String): FolderStore.MoveResult =
+        edit { it.moveFolder(folderId, null) }
+
     // ------------------------------------------------------- referencias externas
 
     private fun reconcileExternalRefs(store: FolderStore) {
