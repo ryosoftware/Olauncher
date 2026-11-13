@@ -25,6 +25,13 @@ class FolderRepository(context: Context) {
     val showFoldersFirst: Boolean
         get() = settings.getBoolean(KEY_SHOW_FOLDERS_FIRST, false)
 
+    /**
+     * Si el teclado debe mostrarse automáticamente dentro de una carpeta. Solo tiene efecto si la
+     * preferencia global `autoShowKeyboard` está activa. Por defecto `false`.
+     */
+    val showKeyboardInFolders: Boolean
+        get() = settings.getBoolean(KEY_SHOW_KEYBOARD_IN_FOLDERS, false)
+
     fun load(): FolderStore {
         val store = FolderStore(FolderStore.deserialize(settings.getString(KEY_FOLDERS_DATA, "")))
         reconcileExternalRefs(store)
@@ -251,6 +258,7 @@ class FolderRepository(context: Context) {
         private const val KEY_FOLDERS_DATA = "FOLDERS_DATA"
         private const val KEY_ALLOW_DUPLICATE_ITEMS = "FOLDERS_ALLOW_DUPLICATE_ITEMS"
         private const val KEY_SHOW_FOLDERS_FIRST = "FOLDERS_SHOW_FOLDERS_FIRST"
+        private const val KEY_SHOW_KEYBOARD_IN_FOLDERS = "FOLDERS_SHOW_KEYBOARD_IN_FOLDERS"
         private const val MAX_HOME_SLOTS = 8
     }
 }

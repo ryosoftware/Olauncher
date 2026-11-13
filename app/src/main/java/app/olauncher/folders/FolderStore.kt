@@ -77,6 +77,33 @@ class FolderStore(snapshot: Snapshot = Snapshot()) {
     /** Carpetas que están en la raíz del App Drawer, en orden de inserción. */
     fun rootFolderIds(): List<String> = folderIdsAt(LOCATION_DRAWER)
 
+    /**
+     * [folderId] y todas sus carpetas descendientes. Con `null` devuelve todas las carpetas de la
+     * raíz del App Drawer y sus descendientes. Recorrido en anchura, sin duplicados.
+     */
+    fun subtreeFolderIds(folderId: String?): List<String> {
+        val start = if (folderId == null) rootFolderIds() else listOf(folderId)
+        val result = LinkedHashSet<String>()
+        val pending = ArrayDeque<String>()
+        start.forEach { pending.addLast(it) }
+        while (pending.isNotEmpty()) {
+            val id = pending.removeFirst()
+            if (id !in folders || !result.add(id)) continue
+            pending.addAll(childFolderIds(id))
+        }
+        return result.toList()
+    }
+
+    /**
+     * Ids de todos los elementos contenidos en las carpetas de [subtreeFolderIds], incluidas las
+     * filas de subcarpetas. Con `null` cubre todas las carpetas de la raíz y sus descendientes.
+     */
+    fun subtreeItemIds(folderId: String?): List<String> {
+        val result = LinkedHashSet<String>()
+        subtreeFolderIds(folderId).forEach { id -> result.addAll(childrenOf(id)) }
+        return result.toList()
+    }
+
     /** Carpetas referenciadas desde [location] (p. ej. [LOCATION_DRAWER]), en orden. */
     fun folderIdsAt(location: String): List<String> =
         externalRefs.filter { it.location == location && it.folderId in folders }.map { it.folderId }

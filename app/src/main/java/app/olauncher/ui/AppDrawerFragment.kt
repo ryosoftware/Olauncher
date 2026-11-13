@@ -140,6 +140,9 @@ class AppDrawerFragment : BaseFragment() {
                         return true
                     }
                     adapter.allowAutoLaunch = !isSearchComposing()
+                    // La búsqueda en la raíz puede incluir apps ocultas dentro de carpetas
+                    if (newText.isNotBlank() && flag == Constants.FLAG_LAUNCH_APP)
+                        ensureHiddenAppsLoaded()
                     adapter.filter.filter(newText)
                     binding.appRename.visibility =
                         if (canRename && newText.isNotBlank()) View.VISIBLE else View.GONE
@@ -345,7 +348,8 @@ class AppDrawerFragment : BaseFragment() {
             if (flag == Constants.FLAG_LAUNCH_APP) {
                 viewModel.hiddenApps.observe(viewLifecycleOwner) {
                     currentHiddenApps = it.orEmpty()
-                    if (folderController.isInsideFolder) updateCombinedAppList()
+                    // También en la raíz: el corpus de búsqueda resuelve apps ocultas en carpetas
+                    updateCombinedAppList()
                 }
                 viewModel.privateSpaceAvailable.observe(viewLifecycleOwner) {
                     currentPrivateSpaceAvailable = it
@@ -370,6 +374,13 @@ class AppDrawerFragment : BaseFragment() {
         // Dentro de una carpeta se resuelven también las apps ocultas en la vista principal
         val resolveApps = if (folderController.isInsideFolder) apps + currentHiddenApps else apps
         val combined = folderController.visibleItems(resolveApps, extraApps, flag)
+        // La búsqueda abarca las carpetas del nivel actual y todas sus subcarpetas
+        adapter.searchCorpus = folderController.searchItems(
+            visible = combined,
+            resolveApps = apps + currentHiddenApps,
+            extraApps = extraApps,
+            flag = flag,
+        )
 
         // El espacio privado solo se muestra en la raíz, no dentro de una carpeta
         if (flag == Constants.FLAG_LAUNCH_APP && !folderController.isInsideFolder &&
@@ -420,12 +431,17 @@ class AppDrawerFragment : BaseFragment() {
         updateSearchHint()
         folderBackCallback?.isEnabled = folderController.canHandleBack()
         updateCombinedAppList(resetScroll)
-        if (insideFolder) {
+        if (resetScroll) {
+            binding.search.showKeyboard(shouldAutoShowKeyboard())
+        } else if (insideFolder) {
             binding.search.hideKeyboard()
-        } else if (resetScroll) {
-            binding.search.showKeyboard(prefs.autoShowKeyboard)
         }
     }
+
+    /** El teclado automático dentro de carpetas requiere además la preferencia específica. */
+    private fun shouldAutoShowKeyboard(): Boolean =
+        prefs.autoShowKeyboard &&
+                (!folderController.isInsideFolder || folderController.showKeyboardInFolders)
 
     private fun scrollListToTop() {
         if (_binding == null) return
@@ -462,8 +478,7 @@ class AppDrawerFragment : BaseFragment() {
     }
 
     private fun updateSearchHint() {
-        val insideFolder = folderController.isInsideFolder
-        binding.searchRow.visibility = if (insideFolder) View.GONE else View.VISIBLE
+        binding.searchRow.visibility = View.VISIBLE
         val folderName = folderController.currentFolderName()
         if (folderName.isNullOrBlank()) {
             binding.folderPath.visibility = View.GONE
@@ -517,7 +532,7 @@ class AppDrawerFragment : BaseFragment() {
                             binding.search.hideKeyboard()
                         else if (!recyclerView.canScrollVertically(-1))
                             if (!onTop && isRemoving.not())
-                                binding.search.showKeyboard(prefs.autoShowKeyboard)
+                                binding.search.showKeyboard(shouldAutoShowKeyboard())
                     }
                 }
             }
@@ -543,12 +558,8 @@ class AppDrawerFragment : BaseFragment() {
         updateSearchHint()
         folderBackCallback?.isEnabled = folderController.canHandleBack()
         updateCombinedAppList()
-        if (folderController.isInsideFolder) {
-            ensureHiddenAppsLoaded()
-            binding.search.hideKeyboard()
-        } else {
-            binding.search.showKeyboard(prefs.autoShowKeyboard)
-        }
+        if (folderController.isInsideFolder) ensureHiddenAppsLoaded()
+        binding.search.showKeyboard(shouldAutoShowKeyboard())
     }
 
     override fun onStop() {

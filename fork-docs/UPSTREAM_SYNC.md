@@ -37,13 +37,12 @@ Configuración esperada:
 - `origin`: repositorio del fork personalizado.
 - `upstream`: repositorio original de Olauncher.
 
-### Estado actual (2026-11-10)
+### Estado actual (2026-11-13)
 
 - `origin`: `https://github.com/tanujnotes/Olauncher.git` (upstream).
 - No existe remoto `upstream` ni remoto del fork.
-- Rama `master` en `0dc1c57`, 9 commits por delante de `2606973`.
-- Hay cambios locales sin commit: MOD-009 (selector con «Mover a la raíz»), `.gitignore` y
-  `app/build.gradle`.
+- Rama `master` en `ea701c2`, 12 commits por delante de `2606973`.
+- Hay cambios locales sin commit: MOD-010 (teclado en carpetas) y MOD-011 (búsqueda recursiva).
 
 Antes de la primera sincronización:
 
@@ -182,6 +181,9 @@ Para la gestión de carpetas, consultar `../FOLDER_FEATURE.md` y comprobar como 
 - Persistencia después de reiniciar la aplicación.
 - Prevención de relaciones circulares entre carpetas.
 - Eliminación correcta de carpetas sin referencias activas.
+- Búsqueda recursiva en el nivel actual y sus subcarpetas.
+- Visibilidad de la barra de búsqueda dentro de carpetas.
+- Teclado automático en carpetas según `autoShowKeyboard` y `showKeyboardInFolders`.
 
 También deben verificarse las funcionalidades originales afectadas.
 
@@ -323,8 +325,12 @@ recursos nuevos. Al sincronizar, revisar especialmente los enlaces con `AppModel
 
 Estado de referencia para la validación:
 
-- 44 pruebas unitarias.
-- `assembleDebug` y `assembleRelease` correctos.
-- Lint con 22 errores preexistentes.
+- 46 pruebas unitarias.
+- `assembleDebug` correcto; `assembleRelease` correcto en la validación anterior.
+- Lint con 22 errores y 106 avisos preexistentes; sin hallazgos nuevos en carpetas ni en las
+  clases modificadas por MOD-010/MOD-011.
+- Búsqueda recursiva en carpetas y subcarpetas; barra visible dentro de carpetas.
+- Teclado automático en carpetas controlado por `FOLDERS_SHOW_KEYBOARD_IN_FOLDERS` (por defecto
+  `false`) además de `autoShowKeyboard`.
 - Pinned-shortcuts: Android solo entrega al launcher los fijados por él mismo.
 

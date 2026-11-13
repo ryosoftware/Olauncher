@@ -27,7 +27,7 @@ Este documento es una referencia técnica viva y debe actualizarse siempre que s
 
 ## 3. Información del repositorio
 
-Datos comprobados en Git y en la configuración real del proyecto a 2026-11-10.
+Datos comprobados en Git y en la configuración real del proyecto a 2026-11-13.
 
 | Propiedad | Valor |
 |---|---|
@@ -39,13 +39,13 @@ Datos comprobados en Git y en la configuración real del proyecto a 2026-11-10.
 | Rama de upstream | `origin/master` (el remoto `origin` apunta a upstream) |
 | Commit original de referencia | `2606973` (v6.11.5) |
 | Último commit de upstream integrado | `2606973` (no se ha sincronizado nada posterior) |
-| Commit actual del fork | `0dc1c57` (más MOD-009 sin commit) |
+| Commit actual del fork | `ea701c2` (más MOD-010 y MOD-011 sin commit) |
 | Lenguaje principal | Kotlin |
 | Sistema de construcción | Gradle 8.9.1, Android Gradle Plugin 8.9.1 |
 | SDK | compileSdk 36, minSdk 24, targetSdk 36 |
 | Versión actual en el árbol de trabajo | versionCode 117, versionName `v6.11.5-1` (sin commit) |
 
-El fork está **9 commits por delante** de `2606973`. No existe remoto `upstream` separado; `origin` sigue apuntando al repositorio original.
+El fork está **12 commits por delante** de `2606973`, más los cambios locales de MOD-010 y MOD-011. No existe remoto `upstream` separado; `origin` sigue apuntando al repositorio original.
 
 ## 4. Resumen de funcionalidades propias
 
@@ -66,8 +66,10 @@ Estados posibles: Planificada, En desarrollo, Implementada, Probada, Necesita ad
 | MOD-005 | Correcciones de refresco, transición y scroll | Implementada / probada | `AppDrawerFragment.kt`, `AppDrawerAdapter.kt`, `adapter_app_drawer.xml` | `c55f5a9` |
 | MOD-006 | `showFoldersFirst` por defecto `false` | Decisión de producto | `FolderRepository.kt` | `dac1090` |
 | MOD-007 | Optimización del renderizado de contenido de carpetas | Probada por compilación; validación manual pendiente | `AppDrawerFragment.kt`, `FolderDrawerController.kt` | `6fc1019` |
-| MOD-008 | Ocultar el header del buscador dentro de carpetas | Implementada / probada por compilación | `AppDrawerFragment.kt`, `fragment_app_drawer.xml`, `layout-land/fragment_app_drawer.xml` | `0dc1c57` |
-| MOD-009 | Mover una carpeta anidada a la raíz desde el selector | Implementada; pendiente de commit | `FolderStore.kt`, `FolderRepository.kt`, `FolderPickerFragment.kt`, `FolderPickerAdapter.kt`, `strings_folders.xml` | Sin commit |
+| MOD-008 | Ocultar el header del buscador dentro de carpetas | Obsoleta; revertida por MOD-011 | `AppDrawerFragment.kt`, `fragment_app_drawer.xml`, `layout-land/fragment_app_drawer.xml` | `0dc1c57` |
+| MOD-009 | Mover una carpeta anidada a la raíz desde el selector | Implementada / probada | `FolderStore.kt`, `FolderRepository.kt`, `FolderPickerFragment.kt`, `FolderPickerAdapter.kt`, `strings_folders.xml` | `c1ea348` |
+| MOD-010 | Preferencia interna de teclado automático dentro de carpetas | Implementada; pendiente de commit | `FolderRepository.kt`, `FolderDrawerController.kt`, `AppDrawerFragment.kt` | Sin commit |
+| MOD-011 | Búsqueda recursiva en carpetas y subcarpetas | Implementada; pendiente de commit | `FolderStore.kt`, `FolderDrawerController.kt`, `AppDrawerAdapter.kt`, `AppDrawerFragment.kt`, tests | Sin commit |
 
 ### Detalles relevantes
 
@@ -78,20 +80,23 @@ Estados posibles: Planificada, En desarrollo, Implementada, Probada, Necesita ad
 - **MOD-005:** se refresca el contenido al cambiar nombres; se enlazan filas con la lista comprometida del adapter; el scroll se aplica tras el commit de la lista.
 - **MOD-006:** el fork usa por defecto orden mixto (`false`), mientras la especificación proponía `true`.
 - **MOD-007:** se elimina el escaneo completo de apps al abrir carpeta; se reutilizan `currentAppList` y `viewModel.hiddenApps`; se evita el filtro redundante y se cachea el `Collator`.
-- **MOD-008:** dentro de carpetas se oculta la fila del buscador/teclado para ganar altura; la búsqueda sigue disponible en la raíz y en el selector de carpetas. El nombre de la carpeta queda como título superior.
+- **MOD-008:** quedó obsoleta con MOD-011. Ocultaba la fila del buscador dentro de carpetas para ganar altura; ahora la barra vuelve a mostrarse para permitir la búsqueda recursiva. El nombre de la carpeta sigue como título superior.
 - **MOD-009:** el selector muestra «Mover a la raíz» como primera fila solo cuando el elemento es una carpeta anidada. Reutiliza `moveFolder(id, null)`, que traspasa la pertenencia jerárquica de forma atómica. Si ya existe una carpeta homónima en la raíz, devuelve `NAME_CONFLICT` y no modifica nada. «New folder» sigue al final.
+- **MOD-010:** clave `FOLDERS_SHOW_KEYBOARD_IN_FOLDERS` en el mismo `SharedPreferences`, expuesta por `FolderRepository.showKeyboardInFolders` y `FolderDrawerController.showKeyboardInFolders`. Valor por defecto `false`. Solo tiene efecto combinada con `autoShowKeyboard`: el teclado automático dentro de una carpeta requiere ambas. Sin interfaz de usuario.
+- **MOD-011:** la búsqueda incluye el contenido de las carpetas del nivel actual y de todas sus subcarpetas, además de las filas de carpeta de esos subniveles. `FolderStore.subtreeFolderIds/subtreeItemIds` recorren el subárbol; `FolderDrawerController.searchItems` construye el corpus deduplicado por identidad. `AppDrawerAdapter` filtra sobre ese corpus y mantiene la lista visible cuando la consulta está vacía. La barra de búsqueda vuelve a mostrarse dentro de carpetas (revierte MOD-008).
 
 ## 6. Arquitectura y decisiones de implementación
 
 - **Separación por paquete:** toda la lógica nueva vive en `app/src/main/java/app/olauncher/folders/`.
 - **Un solo padre:** el padre se deriva de la lista de hijos. No se almacena un contador de referencias; se calcula a partir de padre existente y referencias externas. Es equivalente al contador persistente de la especificación y evita desincronización.
-- **Persistencia sin tocar `Prefs`:** `FolderRepository` usa el mismo `SharedPreferences` (`app.olauncher`) con claves propias: `FOLDERS_DATA`, `FOLDERS_ALLOW_DUPLICATE_ITEMS`, `FOLDERS_SHOW_FOLDERS_FIRST`.
+- **Persistencia sin tocar `Prefs`:** `FolderRepository` usa el mismo `SharedPreferences` (`app.olauncher`) con claves propias: `FOLDERS_DATA`, `FOLDERS_ALLOW_DUPLICATE_ITEMS`, `FOLDERS_SHOW_FOLDERS_FIRST`, `FOLDERS_SHOW_KEYBOARD_IN_FOLDERS`.
 - **Referencias externas:** se reconstruyen en cada carga desde los slots reales de escritorio y swipe; las claves legacy no se usan.
 - **Representación de fila de carpeta:** `AppModel.App` con `appPackage = folder:<id>`. Se evita modificar `AppModel`, `DiffUtil`, `MainViewModel`, `Prefs` y otras clases originales.
 - **Navegación:** pila interna en el fragmento, con `OnBackPressedCallback`; al volver del selector se restaura la ruta mediante `savedStateHandle`.
 - **Contenido de carpeta:** se resuelve con `currentAppList + viewModel.hiddenApps`; no se vuelve a ejecutar `getAppsList` al abrir carpetas.
 - **Selector:** `FolderPickerFragment` reutiliza el layout visual del App Drawer; las rutas se muestran completas y se excluyen destinos que crearían ciclos.
-- **Búsqueda:** en raíz y selector; deshabilitada dentro de carpetas en MOD-008.
+- **Búsqueda:** en raíz, selector y dentro de carpetas. Desde cualquier nivel busca en los elementos de ese nivel y en el contenido de sus carpetas y subcarpetas; el corpus se resuelve con `apps + hiddenApps` y se deduplica por identidad.
+- **Teclado en carpetas:** `autoShowKeyboard` sigue siendo la preferencia global; `FOLDERS_SHOW_KEYBOARD_IN_FOLDERS` decide si el teclado se muestra automáticamente dentro de carpetas. Por defecto no.
 - **Pinned-shortcuts:** Android solo muestra al launcher los shortcuts fijados por él mismo. Los fijados por otro launcher requieren volver a fijarse desde la app de origen.
 
 ## 7. Inventario de archivos modificados
@@ -102,7 +107,7 @@ Comprobado con `git diff 2606973..HEAD` y el árbol de trabajo.
 |---|---|---|---|
 | `app/src/main/java/app/olauncher/folders/` (10 archivos) | Carpetas | Lógica nueva aislada | Bajo |
 | `app/src/test/java/app/olauncher/folders/` (2 archivos) | Carpetas | Pruebas del modelo | Bajo |
-| `ui/AppDrawerAdapter.kt` | Carpetas | Indicador, acciones, etiquetas y enlace de filas | Alto |
+| `ui/AppDrawerAdapter.kt` | Carpetas | Indicador, acciones, etiquetas, enlace de filas y corpus de búsqueda | Alto |
 | `ui/AppDrawerFragment.kt` | Carpetas | Navegación, selector, teclado y refresco | Alto |
 | `ui/HomeFragment.kt` | Carpetas | Carpetas en escritorio y swipe | Medio |
 | `res/layout/adapter_app_drawer.xml` | Carpetas | Celda «Carpeta» | Medio |
@@ -112,7 +117,7 @@ Comprobado con `git diff 2606973..HEAD` y el árbol de trabajo.
 | `res/drawable/ic_folder.xml`, `ic_chevron_right.xml` | Carpetas | Iconos | Bajo |
 | `res/layout/adapter_folder_picker_row.xml`, `dialog_folder_name.xml` | Carpetas | Selector y alta | Bajo |
 
-Cambios locales sin commit en el árbol de trabajo: MOD-009 (selector de «Mover a la raíz»), `.gitignore` y `app/build.gradle` (`versionName v6.11.5-1`).
+Cambios locales sin commit en el árbol de trabajo: MOD-010 (preferencia de teclado en carpetas) y MOD-011 (búsqueda recursiva). MOD-009 ya está confirmada en `c1ea348`.
 
 ## 8. Pruebas y prevención de regresiones
 
@@ -125,11 +130,12 @@ Comandos ejecutados:
 ./gradlew lintDebug
 ```
 
-Resultados reales (2026-11-11, tras MOD-009):
+Resultados reales (2026-11-13, tras MOD-010 y MOD-011):
 
-- `testDebugUnitTest`: **44 tests, BUILD SUCCESSFUL**. Incluyen jerarquía, ciclos, rutas, referencias, cascada, serialización, ordenación, política de duplicados y conflicto de nombre al mover a la raíz.
-- `assembleDebug` y `assembleRelease`: **BUILD SUCCESSFUL**.
-- `lintDebug`: 22 errores preexistentes (`NewApi`, `MissingTranslation` originales, `UnsafeImplicitIntentLaunch`). No hay hallazgos nuevos en el paquete de carpetas ni en MOD-009.
+- `testDebugUnitTest`: **46 tests, BUILD SUCCESSFUL**. Incluyen jerarquía, ciclos, rutas, referencias, cascada, serialización, ordenación, política de duplicados, conflicto de nombre al mover a la raíz y recorrido de subárboles para la búsqueda.
+- `assembleDebug`: **BUILD SUCCESSFUL**.
+- `assembleRelease`: BUILD SUCCESSFUL en la validación anterior (2026-11-11); no se ha vuelto a ejecutar tras MOD-010/MOD-011.
+- `lintDebug`: **22 errores y 106 avisos preexistentes** (`NewApi`, `MissingTranslation` originales, `UnsafeImplicitIntentLaunch`). No hay hallazgos en el paquete de carpetas, `AppDrawerAdapter.kt` ni `AppDrawerFragment.kt`.
 
 Pruebas manuales realizadas durante el desarrollo:
 
@@ -139,9 +145,11 @@ Pruebas manuales realizadas durante el desarrollo:
 - Carpetas en escritorio y swipe.
 - Etiquetas Quitar/Borrar y menú de shortcuts.
 - Persistencia y navegación Atrás.
+- Barra de búsqueda visible dentro de carpetas y búsqueda de apps/shortcuts y filas de carpeta en subcarpetas.
+- Teclado automático dentro de carpetas con la nueva preferencia activada y desactivada.
 - Limitación observada: pinned-shortcuts fijados por otro launcher no son visibles para Olauncher.
 
-Pendiente de validación manual: comportamiento final de MOD-008 (header oculto en carpetas) y una pasada completa de aceptación.
+Pendiente de validación manual: comportamiento final de MOD-010 y MOD-011 (teclado y búsqueda recursiva en dispositivos reales) y una pasada completa de aceptación.
 
 No existen pruebas instrumentadas en el proyecto.
 
@@ -172,15 +180,18 @@ Cualquier agente que trabaje en este repositorio debe:
 | 2026-11-10 | `showFoldersFirst=false` por defecto | Carpetas | `dac1090` |
 | 2026-11-10 | Optimización de renderizado de carpetas | Carpetas | `6fc1019` |
 | 2026-11-10 | Ocultar header del buscador en carpetas | Carpetas | `0dc1c57` |
-| 2026-11-10 | Documentación de estado actual | Infraestructura | Sin commit |
-| 2026-11-11 | Mover carpeta anidada a la raíz desde el selector | Carpetas | Sin commit |
+| 2026-11-10 | Documentación de estado actual | Infraestructura | `b89b930` |
+| 2026-11-11 | Mover carpeta anidada a la raíz desde el selector | Carpetas | `c1ea348` |
+| 2026-11-13 | Preferencia de teclado automático dentro de carpetas | Carpetas | Sin commit |
+| 2026-11-13 | Búsqueda recursiva en carpetas y subcarpetas | Carpetas | Sin commit |
 
 ## 11. Problemas conocidos y deuda técnica
 
 - Lint mantiene 22 errores preexistentes ajenos a las carpetas.
-- `allowDuplicateItems` y `showFoldersFirst` no tienen interfaz de usuario, por especificación.
+- `allowDuplicateItems`, `showFoldersFirst` y `showKeyboardInFolders` no tienen interfaz de usuario, por especificación.
 - `showFoldersFirst` usa `false` por defecto en el fork; la especificación proponía `true`.
-- Dentro de carpetas no hay búsqueda desde MOD-008.
+- La búsqueda recursiva no muestra la ruta de la carpeta de origen de cada resultado; los resultados de subcarpetas aparecen como filas planas.
+- Al abrir una carpeta desde un resultado de búsqueda, Atrás vuelve al nivel donde se estaba buscando, no a la carpeta padre real del resultado.
 - La pila de navegación de carpetas es interna al fragmento y no se conserva ante recreación por configuración.
 - Los pinned-shortcuts fijados por otro launcher no son visibles para Olauncher; hay que volver a fijarlos desde la app de origen.
 - La identidad de app dentro de carpetas es `package|user`, sin actividad; varias actividades del mismo paquete se colapsan.

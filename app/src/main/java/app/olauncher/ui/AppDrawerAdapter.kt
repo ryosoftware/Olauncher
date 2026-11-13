@@ -73,6 +73,12 @@ class AppDrawerAdapter(
     var appsList: MutableList<AppModel> = mutableListOf()
     var appFilteredList: MutableList<AppModel> = mutableListOf()
 
+    /**
+     * Corpus opcional para la búsqueda. Incluye las apps ocultas dentro de carpetas y el contenido
+     * de las subcarpetas; cuando es `null` se filtra sobre [appsList].
+     */
+    var searchCorpus: List<AppModel>? = null
+
     override fun getItemViewType(position: Int): Int {
         return when (currentList.getOrNull(position)) {
             is AppModel.PrivateSpaceHeader -> VIEW_TYPE_PRIVATE_HEADER
@@ -141,8 +147,9 @@ class AppDrawerAdapter(
                 isBangSearch = charSearch?.startsWith("!") ?: false
                 autoLaunch = allowAutoLaunch && (charSearch?.startsWith(" ")?.not() ?: true)
 
+                val source = if (charSearch.isNullOrBlank()) appsList else searchCorpus ?: appsList
                 val appFilteredList = (if (charSearch.isNullOrBlank()) appsList
-                else appsList.filter { app ->
+                else source.filter { app ->
                     app !is AppModel.PrivateSpaceHeader && appLabelMatches(app.appLabel, charSearch)
                 } as MutableList<AppModel>)
 

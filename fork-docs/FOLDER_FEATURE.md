@@ -224,6 +224,20 @@ Si una carpeta se abre desde el escritorio o desde una acción de deslizamiento,
 
 No deben introducirse comportamientos de navegación inconsistentes entre las distintas formas de acceder a una carpeta.
 
+### 7.3. Búsqueda recursiva en carpetas
+
+La búsqueda debe estar disponible tanto en la raíz del App Drawer como dentro de las carpetas.
+
+Desde cualquier nivel, la búsqueda debe abarcar:
+
+- Los elementos del nivel actual.
+- El contenido de las carpetas de ese nivel.
+- El contenido de todas sus subcarpetas, en cualquier profundidad.
+
+Los resultados pueden incluir aplicaciones, pinned-shortcuts y filas de carpeta de los subniveles, de modo que una coincidencia con el nombre de una subcarpeta permita abrirla. Los resultados se muestran como una lista plana, sin indicar la ruta de origen.
+
+Al abrir una carpeta desde un resultado de búsqueda, Atrás vuelve al nivel desde el que se buscó.
+
 ## 8. Renombrar y eliminar carpetas
 
 ### 8.1. Renombrar
@@ -410,6 +424,16 @@ No se deben añadir todavía controles, pantallas ni diálogos para modificar `a
 
 La implementación debe permitir utilizar estos valores internamente y facilitar que se pueda incorporar una interfaz de configuración en el futuro sin tener que modificar la lógica principal de las carpetas.
 
+### 12.4. `showKeyboardInFolders` (específica del fork)
+
+Tipo: boolean.
+
+Valor predeterminado: `false`.
+
+Indica si el teclado debe mostrarse automáticamente al entrar en una carpeta. Solo tiene efecto si la preferencia global `autoShowKeyboard` está activa; si esta está desactivada, el teclado no se muestra nunca de forma automática.
+
+La barra de búsqueda es visible dentro de las carpetas con independencia de este valor; la preferencia solo controla la aparición automática del teclado. No debe añadirse interfaz de usuario para modificarla.
+
 ## 13. Ordenación y presentación
 
 ### 13.1. Ordenación
@@ -578,6 +602,8 @@ La funcionalidad se considerará implementada cuando se cumplan los siguientes c
 - Añadir pinned-shortcuts respeta `allowDuplicateItems`.
 - Añadir carpetas siempre las mueve y conserva su identificador y contenido.
 - No se producen ciclos.
+- La búsqueda abarca el nivel actual y todas sus subcarpetas, incluidos los nombres de subcarpeta.
+- La barra de búsqueda es visible dentro de las carpetas.
 
 ### 16.3. Configuración
 
@@ -589,6 +615,8 @@ La funcionalidad se considerará implementada cuando se cumplan los siguientes c
 - Con `showFoldersFirst = true`, las carpetas aparecen antes que aplicaciones y pinned-shortcuts.
 - Con `showFoldersFirst = false`, todos los elementos se ordenan conjuntamente.
 - La ordenación ignora mayúsculas, minúsculas y acentos.
+- `showKeyboardInFolders` existe y su valor predeterminado es `false`.
+- El teclado solo se muestra automáticamente en carpetas si `autoShowKeyboard` y `showKeyboardInFolders` están activos.
 - No se ha añadido interfaz de usuario para modificar estas opciones.
 
 ### 16.4. Presentación
@@ -712,9 +740,14 @@ respecto al texto original. La especificación sigue siendo la referencia funcio
 - La retirada de una carpeta muestra «Quitar» si quedan referencias y «Borrar» si es la última.
 - «Mover a la raíz» rechaza el movimiento si ya existe otra carpeta con el mismo nombre en la raíz.
 - El pinned-shortcut solo se desancla desde la raíz; dentro de una carpeta se retira de la carpeta.
-- Desde MOD-008, dentro de una carpeta se oculta la fila del buscador/teclado para ganar altura.
-  La búsqueda sigue disponible en la raíz y en el selector.
-- No se ha añadido interfaz para `allowDuplicateItems` ni `showFoldersFirst`.
+- MOD-008 ocultaba la fila del buscador dentro de carpetas; MOD-011 la vuelve a mostrar para
+  permitir la búsqueda recursiva.
+- La búsqueda incluye el contenido de las carpetas del nivel actual y de todas sus subcarpetas,
+  incluidas las filas de carpeta de esos subniveles. Los resultados son una lista plana sin ruta.
+- `showKeyboardInFolders` (clave `FOLDERS_SHOW_KEYBOARD_IN_FOLDERS`) permite mostrar el teclado
+  automáticamente dentro de carpetas, combinada con `autoShowKeyboard`. Por defecto `false`.
+- No se ha añadido interfaz para `allowDuplicateItems`, `showFoldersFirst` ni
+  `showKeyboardInFolders`.
 
 ## Limitaciones conocidas
 
@@ -730,13 +763,14 @@ respecto al texto original. La especificación sigue siendo la referencia funcio
 
 ## Pruebas
 
-- 44 pruebas unitarias.
-- `assembleDebug` y `assembleRelease` correctos.
+- 46 pruebas unitarias, incluidas las de recorrido de subárboles para la búsqueda.
+- `assembleDebug` correcto tras MOD-010/MOD-011; `assembleRelease` correcto en la validación
+  anterior.
 - Pruebas manuales de creación, selección, anidamiento, renombrado, retirada, escritorio, swipe,
   persistencia y navegación.
-- Pendiente una pasada completa de aceptación y la validación manual de MOD-008.
+- Pendiente una pasada completa de aceptación y la validación manual de MOD-010 y MOD-011.
 
 ## Commits de referencia
 
 `7a7eb43`, `163128b`, `095ba5c`, `452cd3d`, `2b6c64f`, `c55f5a9`, `dac1090`, `6fc1019`,
-`0dc1c57`. MOD-009 está pendiente de commit.
+`0dc1c57`, `c1ea348`. MOD-010 y MOD-011 están pendientes de commit.

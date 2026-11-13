@@ -27,6 +27,9 @@ class FolderDrawerController(context: Context) {
     val currentFolderId: String?
         get() = stack.lastOrNull()
 
+    val showKeyboardInFolders: Boolean
+        get() = repository.showKeyboardInFolders
+
     fun canHandleBack(): Boolean = stack.isNotEmpty()
 
     fun reload() {
@@ -128,6 +131,33 @@ class FolderDrawerController(context: Context) {
     ): MutableList<AppModel> {
         val folderId = currentFolderId ?: return rootItems(apps, flag)
         return folderItems(folderId, apps, extraApps)
+    }
+
+    /**
+     * Corpus para la búsqueda: los elementos visibles del nivel actual más todo el contenido de
+     * las carpetas de ese nivel y de sus subcarpetas. [resolveApps] debe incluir las apps ocultas
+     * que puedan vivir dentro de carpetas. Deduplica por identidad y conserva el orden.
+     */
+    fun searchItems(
+        visible: List<AppModel>,
+        resolveApps: List<AppModel>,
+        extraApps: List<AppModel>,
+        flag: Int,
+    ): List<AppModel> {
+        if (flag != Constants.FLAG_LAUNCH_APP) return visible
+
+        val byId = HashMap<String, AppModel>()
+        (resolveApps + extraApps).forEach { item -> itemIdOf(item)?.let { byId[it] = item } }
+
+        val result = LinkedHashMap<String, AppModel>()
+        visible.forEach { item -> itemIdOf(item)?.let { result.putIfAbsent(it, item) } }
+
+        store.subtreeItemIds(currentFolderId).forEach { itemId ->
+            if (result.containsKey(itemId)) return@forEach
+            val item = if (store.isFolderId(itemId)) folderRow(itemId) else byId[itemId]
+            if (item != null) result[itemId] = item
+        }
+        return result.values.toList()
     }
 
     private fun rootItems(apps: List<AppModel>, flag: Int): MutableList<AppModel> {

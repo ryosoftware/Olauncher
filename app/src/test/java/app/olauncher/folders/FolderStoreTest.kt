@@ -227,6 +227,40 @@ class FolderStoreTest {
     }
 
     @Test
+    fun `subtreeFolderIds cubre la raiz y todos los niveles anidados`() {
+        val store = FolderStore()
+        val a = store.createFolder("A")
+        val b = store.createFolder("B")
+        val c = store.createFolder("C")
+        store.addToFolder(a, b)
+        store.addToFolder(b, c)
+
+        assertEquals(setOf(a, b, c), store.subtreeFolderIds(null).toSet())
+        assertEquals(listOf(a, b, c), store.subtreeFolderIds(a))
+        assertEquals(listOf(b, c), store.subtreeFolderIds(b))
+        assertEquals(listOf(c), store.subtreeFolderIds(c))
+        assertTrue(store.subtreeFolderIds("folder:missing").isEmpty())
+    }
+
+    @Test
+    fun `subtreeItemIds incluye contenido y carpetas de todo el subarbol`() {
+        val store = FolderStore()
+        val a = store.createFolder("A")
+        val b = store.createFolder("B")
+        val c = store.createFolder("C")
+        store.addToFolder(a, b)
+        store.addToFolder(b, c)
+        store.addToFolder(a, appA)
+        store.addToFolder(b, appB)
+        store.addToFolder(c, shortcut)
+
+        assertEquals(setOf(b, c, appA, appB, shortcut), store.subtreeItemIds(null).toSet())
+        assertEquals(setOf(b, appA, c, appB, shortcut), store.subtreeItemIds(a).toSet())
+        assertEquals(setOf(c, appB, shortcut), store.subtreeItemIds(b).toSet())
+        assertEquals(setOf(shortcut), store.subtreeItemIds(c).toSet())
+    }
+
+    @Test
     fun `nombres duplicados se buscan por nivel ignorando mayusculas y acentos`() {
         val store = FolderStore()
         val trabajo = store.createFolder("Trabajo")

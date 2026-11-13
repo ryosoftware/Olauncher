@@ -14,7 +14,6 @@ Antes de modificar código, consulta:
 
 - `FOLDER_FEATURE.md`: especificación funcional de las carpetas y anexo de implementación.
 - `FORK_MAINTENANCE.md`: registro técnico de las modificaciones realizadas.
-- `MIGRATION.md`: registro histórico del proceso de migración desde el fork de Android/Projects.
 - `UPSTREAM_SYNC.md`: procedimiento de sincronización con el repositorio original.
 
 Consulta también `AGENTS.md` y cualquier otra instrucción aplicable.
