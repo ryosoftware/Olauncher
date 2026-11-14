@@ -39,13 +39,13 @@ Datos comprobados en Git y en la configuración real del proyecto a 2026-11-13.
 | Rama de upstream | `origin/master` (el remoto `origin` apunta a upstream) |
 | Commit original de referencia | `2606973` (v6.11.5) |
 | Último commit de upstream integrado | `2606973` (no se ha sincronizado nada posterior) |
-| Commit actual del fork | `ea701c2` (más MOD-010 y MOD-011 sin commit) |
+| Commit actual del fork | `3836b32` (MOD-010 y MOD-011 incluidas) |
 | Lenguaje principal | Kotlin |
 | Sistema de construcción | Gradle 8.9.1, Android Gradle Plugin 8.9.1 |
 | SDK | compileSdk 36, minSdk 24, targetSdk 36 |
-| Versión actual en el árbol de trabajo | versionCode 117, versionName `v6.11.5-1` (sin commit) |
+| Versión actual en el árbol de trabajo | versionCode 117, versionName `v6.11.5-2` |
 
-El fork está **12 commits por delante** de `2606973`, más los cambios locales de MOD-010 y MOD-011. No existe remoto `upstream` separado; `origin` sigue apuntando al repositorio original.
+El fork está **14 commits por delante** de `2606973`, incluidos MOD-010 y MOD-011 (`3836b32`). No existe remoto `upstream` separado; `origin` sigue apuntando al repositorio original.
 
 ## 4. Resumen de funcionalidades propias
 
@@ -68,8 +68,8 @@ Estados posibles: Planificada, En desarrollo, Implementada, Probada, Necesita ad
 | MOD-007 | Optimización del renderizado de contenido de carpetas | Probada por compilación; validación manual pendiente | `AppDrawerFragment.kt`, `FolderDrawerController.kt` | `6fc1019` |
 | MOD-008 | Ocultar el header del buscador dentro de carpetas | Obsoleta; revertida por MOD-011 | `AppDrawerFragment.kt`, `fragment_app_drawer.xml`, `layout-land/fragment_app_drawer.xml` | `0dc1c57` |
 | MOD-009 | Mover una carpeta anidada a la raíz desde el selector | Implementada / probada | `FolderStore.kt`, `FolderRepository.kt`, `FolderPickerFragment.kt`, `FolderPickerAdapter.kt`, `strings_folders.xml` | `c1ea348` |
-| MOD-010 | Preferencia interna de teclado automático dentro de carpetas | Implementada; pendiente de commit | `FolderRepository.kt`, `FolderDrawerController.kt`, `AppDrawerFragment.kt` | Sin commit |
-| MOD-011 | Búsqueda recursiva en carpetas y subcarpetas | Implementada; pendiente de commit | `FolderStore.kt`, `FolderDrawerController.kt`, `AppDrawerAdapter.kt`, `AppDrawerFragment.kt`, tests | Sin commit |
+| MOD-010 | Preferencia interna de teclado automático dentro de carpetas | Implementada; validación manual pendiente | `FolderRepository.kt`, `FolderDrawerController.kt`, `AppDrawerFragment.kt` | `3836b32` |
+| MOD-011 | Búsqueda recursiva en carpetas y subcarpetas | Implementada; validación manual pendiente | `FolderStore.kt`, `FolderDrawerController.kt`, `AppDrawerAdapter.kt`, `AppDrawerFragment.kt`, tests | `3836b32` |
 
 ### Detalles relevantes
 
@@ -117,7 +117,7 @@ Comprobado con `git diff 2606973..HEAD` y el árbol de trabajo.
 | `res/drawable/ic_folder.xml`, `ic_chevron_right.xml` | Carpetas | Iconos | Bajo |
 | `res/layout/adapter_folder_picker_row.xml`, `dialog_folder_name.xml` | Carpetas | Selector y alta | Bajo |
 
-Cambios locales sin commit en el árbol de trabajo: MOD-010 (preferencia de teclado en carpetas) y MOD-011 (búsqueda recursiva). MOD-009 ya está confirmada en `c1ea348`.
+MOD-010 (preferencia de teclado en carpetas) y MOD-011 (búsqueda recursiva) están confirmadas en `3836b32`; el árbol de trabajo está limpio. MOD-009 ya está confirmada en `c1ea348`.
 
 ## 8. Pruebas y prevención de regresiones
 
@@ -182,8 +182,8 @@ Cualquier agente que trabaje en este repositorio debe:
 | 2026-11-10 | Ocultar header del buscador en carpetas | Carpetas | `0dc1c57` |
 | 2026-11-10 | Documentación de estado actual | Infraestructura | `b89b930` |
 | 2026-11-11 | Mover carpeta anidada a la raíz desde el selector | Carpetas | `c1ea348` |
-| 2026-11-13 | Preferencia de teclado automático dentro de carpetas | Carpetas | Sin commit |
-| 2026-11-13 | Búsqueda recursiva en carpetas y subcarpetas | Carpetas | Sin commit |
+| 2026-11-13 | Preferencia de teclado automático dentro de carpetas | Carpetas | `3836b32` |
+| 2026-11-13 | Búsqueda recursiva en carpetas y subcarpetas | Carpetas | `3836b32` |
 
 ## 11. Problemas conocidos y deuda técnica
 
