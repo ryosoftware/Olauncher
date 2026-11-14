@@ -43,7 +43,7 @@ Datos comprobados en Git y en la configuración real del proyecto a 2026-11-13.
 | Lenguaje principal | Kotlin |
 | Sistema de construcción | Gradle 8.9.1, Android Gradle Plugin 8.9.1 |
 | SDK | compileSdk 36, minSdk 24, targetSdk 36 |
-| Versión actual en el árbol de trabajo | versionCode 117, versionName `v6.11.5-2` |
+| Versión actual en el árbol de trabajo | versionCode 117, versionName `v6.11.5-3` |
 
 El fork está **14 commits por delante** de `2606973`, incluidos MOD-010 y MOD-011 (`3836b32`). No existe remoto `upstream` separado; `origin` sigue apuntando al repositorio original.
 
@@ -70,7 +70,7 @@ Estados posibles: Planificada, En desarrollo, Implementada, Probada, Necesita ad
 | MOD-009 | Mover una carpeta anidada a la raíz desde el selector | Implementada / probada | `FolderStore.kt`, `FolderRepository.kt`, `FolderPickerFragment.kt`, `FolderPickerAdapter.kt`, `strings_folders.xml` | `c1ea348` |
 | MOD-010 | Preferencia interna de teclado automático dentro de carpetas | Implementada; validación manual pendiente | `FolderRepository.kt`, `FolderDrawerController.kt`, `AppDrawerFragment.kt` | `3836b32` |
 | MOD-011 | Búsqueda recursiva en carpetas y subcarpetas | Implementada; validación manual pendiente | `FolderStore.kt`, `FolderDrawerController.kt`, `AppDrawerAdapter.kt`, `AppDrawerFragment.kt`, tests | `3836b32` |
-| MOD-012 | Eliminar warning de `RecyclerView.scrollTo` en las transiciones del App Drawer | Implementada; validación manual pendiente | `res/layout/fragment_app_drawer.xml`, `res/layout-land/fragment_app_drawer.xml` | Sin commit |
+| MOD-012 | Eliminar warning de `RecyclerView.scrollTo` en las transiciones del App Drawer | Implementada; validación manual pendiente | `res/layout/fragment_app_drawer.xml`, `res/layout-land/fragment_app_drawer.xml`, `app/build.gradle` | `5719143` |
 
 ### Detalles relevantes
 
@@ -85,7 +85,7 @@ Estados posibles: Planificada, En desarrollo, Implementada, Probada, Necesita ad
 - **MOD-009:** el selector muestra «Mover a la raíz» como primera fila solo cuando el elemento es una carpeta anidada. Reutiliza `moveFolder(id, null)`, que traspasa la pertenencia jerárquica de forma atómica. Si ya existe una carpeta homónima en la raíz, devuelve `NAME_CONFLICT` y no modifica nada. «New folder» sigue al final.
 - **MOD-010:** clave `FOLDERS_SHOW_KEYBOARD_IN_FOLDERS` en el mismo `SharedPreferences`, expuesta por `FolderRepository.showKeyboardInFolders` y `FolderDrawerController.showKeyboardInFolders`. Valor por defecto `false`. Solo tiene efecto combinada con `autoShowKeyboard`: el teclado automático dentro de una carpeta requiere ambas. Sin interfaz de usuario.
 - **MOD-011:** la búsqueda incluye el contenido de las carpetas del nivel actual y de todas sus subcarpetas, además de las filas de carpeta de esos subniveles. `FolderStore.subtreeFolderIds/subtreeItemIds` recorren el subárbol; `FolderDrawerController.searchItems` construye el corpus deduplicado por identidad. `AppDrawerAdapter` filtra sobre ese corpus y mantiene la lista visible cuando la consulta está vacía. La barra de búsqueda vuelve a mostrarse dentro de carpetas (revierte MOD-008).
-- **MOD-012:** la raíz del App Drawer conserva `animateLayoutChanges="true"`. Al ser el `RecyclerView` hijo directo, cada `LayoutTransition` (abrir/cerrar carpeta, cambio de visibilidad de `folderPath`, refresco de lista) llamaba a `View.scrollTo()` sobre él y `RecyclerView` registraba `RecyclerView does not support scrolling to an absolute position`. Se intercala un `FrameLayout` envolvente que recibe la animación; el RecyclerView queda como nieto y deja de recibir `scrollTo`. No cambia el comportamiento ni las animaciones.
+- **MOD-012:** la raíz del App Drawer conserva `animateLayoutChanges="true"`. Al ser el `RecyclerView` hijo directo, cada `LayoutTransition` (abrir/cerrar carpeta, cambio de visibilidad de `folderPath`, refresco de lista) llamaba a `View.scrollTo()` sobre él y `RecyclerView` registraba `RecyclerView does not support scrolling to an absolute position`. Se intercala un `FrameLayout` envolvente que recibe la animación; el RecyclerView queda como nieto y deja de recibir `scrollTo`. No cambia el comportamiento ni las animaciones. El mismo commit incluye el bump de versión a `v6.11.5-3`.
 
 ## 6. Arquitectura y decisiones de implementación
 
@@ -119,7 +119,7 @@ Comprobado con `git diff 2606973..HEAD` y el árbol de trabajo.
 | `res/drawable/ic_folder.xml`, `ic_chevron_right.xml` | Carpetas | Iconos | Bajo |
 | `res/layout/adapter_folder_picker_row.xml`, `dialog_folder_name.xml` | Carpetas | Selector y alta | Bajo |
 
-MOD-010 (preferencia de teclado en carpetas) y MOD-011 (búsqueda recursiva) están confirmadas en `3836b32`; el árbol de trabajo está limpio. MOD-009 ya está confirmada en `c1ea348`.
+MOD-010 (preferencia de teclado en carpetas) y MOD-011 (búsqueda recursiva) están confirmadas en `3836b32`; MOD-012 está confirmada en `5719143`. MOD-009 ya está confirmada en `c1ea348`.
 
 ## 8. Pruebas y prevención de regresiones
 
@@ -192,7 +192,7 @@ Cualquier agente que trabaje en este repositorio debe:
 | 2026-11-11 | Mover carpeta anidada a la raíz desde el selector | Carpetas | `c1ea348` |
 | 2026-11-13 | Preferencia de teclado automático dentro de carpetas | Carpetas | `3836b32` |
 | 2026-11-13 | Búsqueda recursiva en carpetas y subcarpetas | Carpetas | `3836b32` |
-| 2026-11-14 | Eliminar warning de `RecyclerView.scrollTo` con wrapper | Carpetas | Sin commit |
+| 2026-11-14 | Eliminar warning de `RecyclerView.scrollTo` con wrapper | Carpetas | `5719143` |
 
 ## 11. Problemas conocidos y deuda técnica
 
