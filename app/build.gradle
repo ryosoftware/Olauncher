@@ -18,7 +18,7 @@ android {
         minSdkVersion 24
         targetSdkVersion 36
         versionCode 117
-        versionName "v6.11.5-2"
+        versionName "v6.11.5-3"
 
         resourceConfigurations += ["en", "ar", "cs", "da", "de", "el", "es-rES", "es-rUS", "fa", "fi", "fr", "iw", "hi", "hr", "hu", "in", "it", "ja", "ko", "nb", "nl", "pl", "pt-rBR", "ro", "ru-rRU", "sv", "th", "tr", "uk", "vi", "zh", "zh-rTW"]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
