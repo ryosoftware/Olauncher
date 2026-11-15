@@ -96,8 +96,9 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
         initClickListeners()
         initObservers()
 
-        if (showPentastic)
-            binding.footer.text = getText(R.string.new_app_minimal_todo_lists)
+//        if (showPentastic)
+//            binding.footer.text = getText(R.string.new_app_minimal_todo_lists)
+        binding.footer.text = getText(R.string.tanuj_github)
     }
 
     override fun onClick(view: View) {
@@ -140,7 +141,8 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
             R.id.privacy -> requireContext().openUrl(Constants.URL_OLAUNCHER_PRIVACY)
             R.id.footer -> {
                 requireContext().openUrl(
-                    if (showPentastic) Constants.URL_PENTASTIC else Constants.URL_NTS
+                    Constants.URL_TANUJ_OLAUNCHER_GITHUB
+//                    if (showPentastic) Constants.URL_PENTASTIC else Constants.URL_NTS
                 )
             }
         }
@@ -692,8 +694,8 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
         if (prefs.aboutClicked.not())
             binding.aboutOlauncher.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_info, 0)
         if (viewModel.isOlauncherDefault.value != true) return
-        if (prefs.rateClicked.not() && prefs.toShowHintCounter > Constants.HINT_RATE_US && prefs.toShowHintCounter < Constants.HINT_RATE_US + 100)
-            binding.rate.setCompoundDrawablesWithIntrinsicBounds(0, android.R.drawable.arrow_down_float, 0, 0)
+//        if (prefs.rateClicked.not() && prefs.toShowHintCounter > Constants.HINT_RATE_US && prefs.toShowHintCounter < Constants.HINT_RATE_US + 100)
+//            binding.rate.setCompoundDrawablesWithIntrinsicBounds(0, android.R.drawable.arrow_down_float, 0, 0)
     }
 
     private fun populateProMessage() {

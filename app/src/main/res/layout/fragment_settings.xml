@@ -553,6 +553,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:padding="10dp"
+                    android:visibility="gone"
                     android:text="@string/share" />
 
                 <TextView
@@ -563,6 +564,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:padding="10dp"
+                    android:visibility="gone"
                     android:text="@string/rate" />
 
                 <TextView
@@ -583,6 +585,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:padding="10dp"
+                    android:visibility="gone"
                     android:text="@string/x_twitter" />
             </LinearLayout>
 
