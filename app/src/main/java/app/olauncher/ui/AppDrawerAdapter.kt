@@ -25,6 +25,7 @@ import app.olauncher.helper.appLabelMatches
 import app.olauncher.helper.hideKeyboard
 import app.olauncher.helper.isSystemApp
 import app.olauncher.helper.showKeyboard
+import java.util.concurrent.atomic.AtomicInteger
 
 class AppDrawerAdapter(
     private var flag: Int,
@@ -69,6 +70,7 @@ class AppDrawerAdapter(
     var folderRemoveLabel: (AppModel) -> Int = { R.string.remove_from_folder }
     private val appFilter = createAppFilter()
     private val myUserHandle = android.os.Process.myUserHandle()
+    private val listVersion = AtomicInteger(0)
 
     var appsList: MutableList<AppModel> = mutableListOf()
     var appFilteredList: MutableList<AppModel> = mutableListOf()
@@ -143,7 +145,11 @@ class AppDrawerAdapter(
 
     private fun createAppFilter(): Filter {
         return object : Filter() {
+            @Volatile
+            private var filterVersion = 0
+
             override fun performFiltering(charSearch: CharSequence?): FilterResults {
+                filterVersion = listVersion.get()
                 isBangSearch = charSearch?.startsWith("!") ?: false
                 autoLaunch = allowAutoLaunch && (charSearch?.startsWith(" ")?.not() ?: true)
 
@@ -160,8 +166,12 @@ class AppDrawerAdapter(
 
             @Suppress("UNCHECKED_CAST")
             override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+                // Ignora resultados de filtros lanzados antes de la última actualización de lista
+                if (filterVersion != listVersion.get()) return
                 results?.values?.let {
                     val items = it as MutableList<AppModel>
+                    // Un filtro con query vacía nunca debe vaciar una lista que ya tiene elementos
+                    if (constraint.isNullOrBlank() && items.isEmpty() && appsList.isNotEmpty()) return
                     appFilteredList = items
                     submitList(appFilteredList) {
                         autoLaunch(constraint?.toString())
@@ -209,6 +219,9 @@ class AppDrawerAdapter(
         )
         this.appsList = appsList
         this.appFilteredList = appsList
+        // La versión se incrementa después de asignar la lista: cualquier filtro posterior ya ve
+        // los elementos nuevos y los anteriores quedan invalidados.
+        listVersion.incrementAndGet()
         submitList(appsList, onCommitted)
     }
 

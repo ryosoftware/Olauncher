@@ -73,6 +73,7 @@ Estados posibles: Planificada, En desarrollo, Implementada, Probada, Necesita ad
 | MOD-011 | Búsqueda recursiva en carpetas y subcarpetas | Implementada; validación manual pendiente | `FolderStore.kt`, `FolderDrawerController.kt`, `AppDrawerAdapter.kt`, `AppDrawerFragment.kt`, tests | `3836b32` |
 | MOD-012 | Eliminar warning de `RecyclerView.scrollTo` en las transiciones del App Drawer | Implementada; validación manual pendiente | `res/layout/fragment_app_drawer.xml`, `res/layout-land/fragment_app_drawer.xml`, `app/build.gradle` | `5719143` |
 | MOD-013 | Backup/restore manual de ajustes en JSON | Implementada; validación manual pendiente | `backup/PrefsBackup.kt`, `backup/BackupRestoreController.kt`, `SettingsFragment.kt`, layouts, strings, tests | Sin commit |
+| MOD-014 | Evitar que el App Drawer quede vacío al volver del selector de carpetas | Implementada; validación manual pendiente | `AppDrawerAdapter.kt` | Sin commit |
 
 ### Detalles relevantes
 
@@ -89,6 +90,7 @@ Estados posibles: Planificada, En desarrollo, Implementada, Probada, Necesita ad
 - **MOD-011:** la búsqueda incluye el contenido de las carpetas del nivel actual y de todas sus subcarpetas, además de las filas de carpeta de esos subniveles. `FolderStore.subtreeFolderIds/subtreeItemIds` recorren el subárbol; `FolderDrawerController.searchItems` construye el corpus deduplicado por identidad. `AppDrawerAdapter` filtra sobre ese corpus y mantiene la lista visible cuando la consulta está vacía. La barra de búsqueda vuelve a mostrarse dentro de carpetas (revierte MOD-008).
 - **MOD-012:** la raíz del App Drawer conserva `animateLayoutChanges="true"`. Al ser el `RecyclerView` hijo directo, cada `LayoutTransition` (abrir/cerrar carpeta, cambio de visibilidad de `folderPath`, refresco de lista) llamaba a `View.scrollTo()` sobre él y `RecyclerView` registraba `RecyclerView does not support scrolling to an absolute position`. Se intercala un `FrameLayout` envolvente que recibe la animación; el RecyclerView queda como nieto y deja de recibir `scrollTo`. No cambia el comportamiento ni las animaciones. El mismo commit incluye el bump de versión a `v6.11.5-3`.
 - **MOD-013:** backup/restore manual de **todas** las preferencias de `app.olauncher` en un JSON legible versionado. `PrefsBackup` conserva el tipo de cada valor (`Boolean`, `Int`, `Long`, `Float`, `String`, `Set<String>`), valida formato/versión y restaura con `clear()` + escritura + `commit()` en una sola operación. `BackupRestoreController` encapsula el selector SAF, la E/S, el diálogo de confirmación y el refresco; `SettingsFragment` solo lo instancia y delega. Tras restaurar se reprograma o cancela el worker de wallpaper y se recrea la actividad. No se hace copia automática previa ni se modifica la versión de la app. Para que el selector SAF no destruya el fragmento que espera el resultado, `MainActivity` expone `setKeepScreenOnStop`; con el flag activo, `onStop` y `onUserLeaveHint` no vuelven a Home. El flag se limpia en `onStart` y al recibir el resultado.
+- **MOD-014:** al volver de `FolderPickerFragment`, la restauración de la vista del `SearchView` dispara un filtro con query vacía antes de que `onStart` popule el adapter. Ese filtro se ejecuta sobre una lista vacía y su resultado podía publicarse después de `setAppList`, dejando el App Drawer en blanco hasta cerrarlo y reabrirlo. `AppDrawerAdapter` mantiene una versión de lista (`AtomicInteger`) y descarta los resultados de filtros lanzados antes de la última actualización; además ignora un resultado vacío con query vacía si la lista actual ya tiene elementos. No cambia el comportamiento de búsqueda normal.
 
 ## 6. Arquitectura y decisiones de implementación
 
@@ -117,7 +119,7 @@ Comprobado con `git diff 2606973..HEAD` y el árbol de trabajo.
 | `app/src/test/java/app/olauncher/backup/PrefsBackupTest.kt` | Backup/restore | Pruebas de serialización | Bajo |
 | `ui/SettingsFragment.kt` | Carpetas y backup/restore | Navegación, selector, teclado, refresco y enlace del backup | Alto |
 | `MainActivity.kt` | Backup/restore | Evitar volver a Home mientras el selector SAF está abierto | Medio |
-| `ui/AppDrawerAdapter.kt` | Carpetas | Indicador, acciones, etiquetas, enlace de filas y corpus de búsqueda | Alto |
+| `ui/AppDrawerAdapter.kt` | Carpetas | Indicador, acciones, etiquetas, enlace de filas, corpus de búsqueda y filtro versionado (MOD-014) | Alto |
 | `ui/AppDrawerFragment.kt` | Carpetas | Navegación, selector, teclado y refresco | Alto |
 | `ui/HomeFragment.kt` | Carpetas | Carpetas en escritorio y swipe | Medio |
 | `res/layout/adapter_app_drawer.xml` | Carpetas | Celda «Carpeta» | Medio |
@@ -131,7 +133,7 @@ Comprobado con `git diff 2606973..HEAD` y el árbol de trabajo.
 | `res/layout/adapter_folder_picker_row.xml`, `dialog_folder_name.xml` | Carpetas | Selector y alta | Bajo |
 | `gradle/libs.versions.toml`, `app/build.gradle` | Backup/restore | `org.json` solo para pruebas JVM | Bajo |
 
-MOD-010 (preferencia de teclado en carpetas) y MOD-011 (búsqueda recursiva) están confirmadas en `3836b32`; MOD-012 está confirmada en `5719143`. MOD-009 ya está confirmada en `c1ea348`. MOD-013 (backup/restore) está en el árbol de trabajo, sin commit.
+MOD-010 (preferencia de teclado en carpetas) y MOD-011 (búsqueda recursiva) están confirmadas en `3836b32`; MOD-012 está confirmada en `5719143`. MOD-009 ya está confirmada en `c1ea348`. MOD-013 (backup/restore) y MOD-014 (App Drawer vacío al volver del selector) están en el árbol de trabajo, sin commit.
 
 ## 8. Pruebas y prevención de regresiones
 
@@ -164,6 +166,13 @@ Resultados reales (2026-11-22, tras MOD-013):
 - `lintDebug`: **22 errores y 107 avisos preexistentes**. Sin hallazgos en `backup/`, `settings_backup_section.xml` ni `strings_backup.xml`; el aviso adicional respecto a la cifra anterior es ajeno a MOD-013.
 - `assembleRelease`: no ejecutado tras MOD-013.
 - Corrección posterior del ciclo SAF/`onStop`: `testDebugUnitTest` y `assembleDebug` correctos; `lintDebug` mantiene 22 errores y 107 avisos, sin hallazgos en `MainActivity.kt` ni en `backup/`.
+
+Resultados reales (2026-11-22, tras MOD-014):
+
+- `testDebugUnitTest`: **54 tests, BUILD SUCCESSFUL**.
+- `assembleDebug`: **BUILD SUCCESSFUL**.
+- `lintDebug`: mismos **22 errores y 107 avisos** preexistentes; sin hallazgos en `AppDrawerAdapter.kt`.
+- Pendiente de validación manual: volver del selector de carpetas desde la raíz y desde una carpeta, con y sin búsqueda, comprobando que la lista sigue visible.
 
 Pruebas manuales realizadas durante el desarrollo:
 
@@ -222,6 +231,7 @@ Cualquier agente que trabaje en este repositorio debe:
 | 2026-11-13 | Búsqueda recursiva en carpetas y subcarpetas | Carpetas | `3836b32` |
 | 2026-11-14 | Eliminar warning de `RecyclerView.scrollTo` con wrapper | Carpetas | `5719143` |
 | 2026-11-22 | Backup/restore manual de ajustes en JSON | Backup/restore | Sin commit |
+| 2026-11-22 | Evitar App Drawer vacío al volver del selector de carpetas | Carpetas | Sin commit |
 
 ## 11. Problemas conocidos y deuda técnica
 
