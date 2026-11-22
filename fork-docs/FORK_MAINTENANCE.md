@@ -33,25 +33,26 @@ Datos comprobados en Git y en la configuración real del proyecto a 2026-11-13.
 |---|---|
 | Proyecto original | Olauncher |
 | Repositorio original (upstream) | `https://github.com/tanujnotes/Olauncher.git` |
-| Repositorio del fork | Pendiente de publicar / URL no configurada |
-| Ruta local | `/home/roberto/pp/Olauncher` |
+| Repositorio del fork | `https://github.com/ryosoftware/Olauncher.git` |
+| Ruta local | `/home/roberto/Android/Projects/Olauncher` |
 | Rama principal de desarrollo | `master` |
-| Rama de upstream | `origin/master` (el remoto `origin` apunta a upstream) |
+| Rama de upstream | No configurada; el remoto `origin` apunta al fork |
 | Commit original de referencia | `2606973` (v6.11.5) |
 | Último commit de upstream integrado | `2606973` (no se ha sincronizado nada posterior) |
-| Commit actual del fork | `3836b32` (MOD-010 y MOD-011 incluidas) |
+| Commit actual del fork | `b3b8b86` + MOD-013 en el árbol de trabajo |
 | Lenguaje principal | Kotlin |
 | Sistema de construcción | Gradle 8.9.1, Android Gradle Plugin 8.9.1 |
 | SDK | compileSdk 36, minSdk 24, targetSdk 36 |
-| Versión actual en el árbol de trabajo | versionCode 117, versionName `v6.11.5-3` |
+| Versión actual en el árbol de trabajo | versionCode 117, versionName `v6.11.5-4` |
 
-El fork está **14 commits por delante** de `2606973`, incluidos MOD-010 y MOD-011 (`3836b32`). No existe remoto `upstream` separado; `origin` sigue apuntando al repositorio original.
+El fork está **18 commits por delante** de `2606973`, con MOD-013 pendiente de commit. `origin` apunta al repositorio del fork; no hay remoto `upstream` configurado y habrá que añadirlo antes de la primera sincronización.
 
 ## 4. Resumen de funcionalidades propias
 
 | Funcionalidad | Estado | Documentación |
 |---|---|---|
 | Gestión avanzada de carpetas | Implementada; validación manual en curso | `../FOLDER_FEATURE.md` |
+| Backup/restore manual de ajustes | Implementada; validación manual pendiente | Este documento |
 
 Estados posibles: Planificada, En desarrollo, Implementada, Probada, Necesita adaptación, Obsoleta.
 
@@ -71,6 +72,7 @@ Estados posibles: Planificada, En desarrollo, Implementada, Probada, Necesita ad
 | MOD-010 | Preferencia interna de teclado automático dentro de carpetas | Implementada; validación manual pendiente | `FolderRepository.kt`, `FolderDrawerController.kt`, `AppDrawerFragment.kt` | `3836b32` |
 | MOD-011 | Búsqueda recursiva en carpetas y subcarpetas | Implementada; validación manual pendiente | `FolderStore.kt`, `FolderDrawerController.kt`, `AppDrawerAdapter.kt`, `AppDrawerFragment.kt`, tests | `3836b32` |
 | MOD-012 | Eliminar warning de `RecyclerView.scrollTo` en las transiciones del App Drawer | Implementada; validación manual pendiente | `res/layout/fragment_app_drawer.xml`, `res/layout-land/fragment_app_drawer.xml`, `app/build.gradle` | `5719143` |
+| MOD-013 | Backup/restore manual de ajustes en JSON | Implementada; validación manual pendiente | `backup/PrefsBackup.kt`, `backup/BackupRestoreController.kt`, `SettingsFragment.kt`, layouts, strings, tests | Sin commit |
 
 ### Detalles relevantes
 
@@ -86,6 +88,7 @@ Estados posibles: Planificada, En desarrollo, Implementada, Probada, Necesita ad
 - **MOD-010:** clave `FOLDERS_SHOW_KEYBOARD_IN_FOLDERS` en el mismo `SharedPreferences`, expuesta por `FolderRepository.showKeyboardInFolders` y `FolderDrawerController.showKeyboardInFolders`. Valor por defecto `false`. Solo tiene efecto combinada con `autoShowKeyboard`: el teclado automático dentro de una carpeta requiere ambas. Sin interfaz de usuario.
 - **MOD-011:** la búsqueda incluye el contenido de las carpetas del nivel actual y de todas sus subcarpetas, además de las filas de carpeta de esos subniveles. `FolderStore.subtreeFolderIds/subtreeItemIds` recorren el subárbol; `FolderDrawerController.searchItems` construye el corpus deduplicado por identidad. `AppDrawerAdapter` filtra sobre ese corpus y mantiene la lista visible cuando la consulta está vacía. La barra de búsqueda vuelve a mostrarse dentro de carpetas (revierte MOD-008).
 - **MOD-012:** la raíz del App Drawer conserva `animateLayoutChanges="true"`. Al ser el `RecyclerView` hijo directo, cada `LayoutTransition` (abrir/cerrar carpeta, cambio de visibilidad de `folderPath`, refresco de lista) llamaba a `View.scrollTo()` sobre él y `RecyclerView` registraba `RecyclerView does not support scrolling to an absolute position`. Se intercala un `FrameLayout` envolvente que recibe la animación; el RecyclerView queda como nieto y deja de recibir `scrollTo`. No cambia el comportamiento ni las animaciones. El mismo commit incluye el bump de versión a `v6.11.5-3`.
+- **MOD-013:** backup/restore manual de **todas** las preferencias de `app.olauncher` en un JSON legible versionado. `PrefsBackup` conserva el tipo de cada valor (`Boolean`, `Int`, `Long`, `Float`, `String`, `Set<String>`), valida formato/versión y restaura con `clear()` + escritura + `commit()` en una sola operación. `BackupRestoreController` encapsula el selector SAF, la E/S, el diálogo de confirmación y el refresco; `SettingsFragment` solo lo instancia y delega. Tras restaurar se reprograma o cancela el worker de wallpaper y se recrea la actividad. No se hace copia automática previa ni se modifica la versión de la app. Para que el selector SAF no destruya el fragmento que espera el resultado, `MainActivity` expone `setKeepScreenOnStop`; con el flag activo, `onStop` y `onUserLeaveHint` no vuelven a Home. El flag se limpia en `onStart` y al recibir el resultado.
 
 ## 6. Arquitectura y decisiones de implementación
 
@@ -99,6 +102,7 @@ Estados posibles: Planificada, En desarrollo, Implementada, Probada, Necesita ad
 - **Selector:** `FolderPickerFragment` reutiliza el layout visual del App Drawer; las rutas se muestran completas y se excluyen destinos que crearían ciclos.
 - **Búsqueda:** en raíz, selector y dentro de carpetas. Desde cualquier nivel busca en los elementos de ese nivel y en el contenido de sus carpetas y subcarpetas; el corpus se resuelve con `apps + hiddenApps` y se deduplica por identidad.
 - **Teclado en carpetas:** `autoShowKeyboard` sigue siendo la preferencia global; `FOLDERS_SHOW_KEYBOARD_IN_FOLDERS` decide si el teclado se muestra automáticamente dentro de carpetas. Por defecto no.
+- **Backup/restore:** `backup/PrefsBackup.kt` es el núcleo sin UI; `backup/BackupRestoreController.kt` concentra selector SAF, diálogos y E/S. Se copia el `SharedPreferences` completo, incluidas las claves dinámicas de renombrado, `FOLDERS_DATA` y los slots de escritorio/swipe. El restore sustituye todas las claves; las referencias de carpetas se reconcilian al volver a cargar.
 - **Pinned-shortcuts:** Android solo muestra al launcher los shortcuts fijados por él mismo. Los fijados por otro launcher requieren volver a fijarse desde la app de origen.
 
 ## 7. Inventario de archivos modificados
@@ -109,17 +113,25 @@ Comprobado con `git diff 2606973..HEAD` y el árbol de trabajo.
 |---|---|---|---|
 | `app/src/main/java/app/olauncher/folders/` (10 archivos) | Carpetas | Lógica nueva aislada | Bajo |
 | `app/src/test/java/app/olauncher/folders/` (2 archivos) | Carpetas | Pruebas del modelo | Bajo |
+| `app/src/main/java/app/olauncher/backup/` (2 archivos) | Backup/restore | Núcleo JSON y controlador de UI aislados | Bajo |
+| `app/src/test/java/app/olauncher/backup/PrefsBackupTest.kt` | Backup/restore | Pruebas de serialización | Bajo |
+| `ui/SettingsFragment.kt` | Carpetas y backup/restore | Navegación, selector, teclado, refresco y enlace del backup | Alto |
+| `MainActivity.kt` | Backup/restore | Evitar volver a Home mientras el selector SAF está abierto | Medio |
 | `ui/AppDrawerAdapter.kt` | Carpetas | Indicador, acciones, etiquetas, enlace de filas y corpus de búsqueda | Alto |
 | `ui/AppDrawerFragment.kt` | Carpetas | Navegación, selector, teclado y refresco | Alto |
 | `ui/HomeFragment.kt` | Carpetas | Carpetas en escritorio y swipe | Medio |
 | `res/layout/adapter_app_drawer.xml` | Carpetas | Celda «Carpeta» | Medio |
 | `res/layout/fragment_app_drawer.xml` y `layout-land/...` | Carpetas | Título de carpeta, `searchRow` y wrapper del RecyclerView (MOD-012) | Medio |
+| `res/layout/fragment_settings.xml` y `layout-land/...` | Backup/restore | Un `<include>` del bloque de backup | Medio |
+| `res/layout/settings_backup_section.xml` | Backup/restore | Bloque visual aislado | Bajo |
 | `res/navigation/nav_graph.xml` | Carpetas | Destino del selector | Medio |
 | `res/values/strings_folders.xml` y traducciones es | Carpetas | Cadenas nuevas | Bajo |
+| `res/values/strings_backup.xml` y traducciones es | Backup/restore | Cadenas nuevas | Bajo |
 | `res/drawable/ic_folder.xml`, `ic_chevron_right.xml` | Carpetas | Iconos | Bajo |
 | `res/layout/adapter_folder_picker_row.xml`, `dialog_folder_name.xml` | Carpetas | Selector y alta | Bajo |
+| `gradle/libs.versions.toml`, `app/build.gradle` | Backup/restore | `org.json` solo para pruebas JVM | Bajo |
 
-MOD-010 (preferencia de teclado en carpetas) y MOD-011 (búsqueda recursiva) están confirmadas en `3836b32`; MOD-012 está confirmada en `5719143`. MOD-009 ya está confirmada en `c1ea348`.
+MOD-010 (preferencia de teclado en carpetas) y MOD-011 (búsqueda recursiva) están confirmadas en `3836b32`; MOD-012 está confirmada en `5719143`. MOD-009 ya está confirmada en `c1ea348`. MOD-013 (backup/restore) está en el árbol de trabajo, sin commit.
 
 ## 8. Pruebas y prevención de regresiones
 
@@ -145,6 +157,14 @@ Resultados reales (2026-11-14, tras MOD-012):
 - `assembleDebug`: **BUILD SUCCESSFUL**.
 - `lintDebug`: mismos **22 errores y 106 avisos** preexistentes; sin hallazgos en `fragment_app_drawer.xml` ni `layout-land/fragment_app_drawer.xml`.
 
+Resultados reales (2026-11-22, tras MOD-013):
+
+- `testDebugUnitTest`: **54 tests, BUILD SUCCESSFUL** (8 nuevos de `PrefsBackupTest`).
+- `assembleDebug`: **BUILD SUCCESSFUL**.
+- `lintDebug`: **22 errores y 107 avisos preexistentes**. Sin hallazgos en `backup/`, `settings_backup_section.xml` ni `strings_backup.xml`; el aviso adicional respecto a la cifra anterior es ajeno a MOD-013.
+- `assembleRelease`: no ejecutado tras MOD-013.
+- Corrección posterior del ciclo SAF/`onStop`: `testDebugUnitTest` y `assembleDebug` correctos; `lintDebug` mantiene 22 errores y 107 avisos, sin hallazgos en `MainActivity.kt` ni en `backup/`.
+
 Pruebas manuales realizadas durante el desarrollo:
 
 - Crear, abrir, anidar, renombrar y quitar carpetas.
@@ -156,6 +176,14 @@ Pruebas manuales realizadas durante el desarrollo:
 - Barra de búsqueda visible dentro de carpetas y búsqueda de apps/shortcuts y filas de carpeta en subcarpetas.
 - Teclado automático dentro de carpetas con la nueva preferencia activada y desactivada.
 - Limitación observada: pinned-shortcuts fijados por otro launcher no son visibles para Olauncher.
+
+Pendiente de validación manual de MOD-013:
+
+- Guardar un backup desde Ajustes y comprobar que el archivo JSON es legible.
+- Restaurar en la misma instalación: carpetas, referencias de escritorio/swipe, apps ocultas, renombrados, tema, tamaño de texto y wallpaper diario.
+- Restaurar sobre una instalación distinta o tras desinstalar/reinstalar.
+- Cancelar los diálogos de selección y confirmación sin modificar datos.
+- Abrir un archivo inválido y comprobar que no se altera nada.
 
 Pendiente de validación manual: comportamiento final de MOD-010 y MOD-011 (teclado y búsqueda recursiva en dispositivos reales), comprobar en dispositivo que desaparece el warning `RecyclerView does not support scrolling...` con MOD-012 y una pasada completa de aceptación.
 
@@ -193,10 +221,11 @@ Cualquier agente que trabaje en este repositorio debe:
 | 2026-11-13 | Preferencia de teclado automático dentro de carpetas | Carpetas | `3836b32` |
 | 2026-11-13 | Búsqueda recursiva en carpetas y subcarpetas | Carpetas | `3836b32` |
 | 2026-11-14 | Eliminar warning de `RecyclerView.scrollTo` con wrapper | Carpetas | `5719143` |
+| 2026-11-22 | Backup/restore manual de ajustes en JSON | Backup/restore | Sin commit |
 
 ## 11. Problemas conocidos y deuda técnica
 
-- Lint mantiene 22 errores preexistentes ajenos a las carpetas.
+- Lint mantiene 22 errores y 107 avisos preexistentes ajenos a las carpetas y al backup.
 - `allowDuplicateItems`, `showFoldersFirst` y `showKeyboardInFolders` no tienen interfaz de usuario, por especificación.
 - `showFoldersFirst` usa `false` por defecto en el fork; la especificación proponía `true`.
 - La búsqueda recursiva no muestra la ruta de la carpeta de origen de cada resultado; los resultados de subcarpetas aparecen como filas planas.
@@ -205,8 +234,10 @@ Cualquier agente que trabaje en este repositorio debe:
 - Los pinned-shortcuts fijados por otro launcher no son visibles para Olauncher; hay que volver a fijarlos desde la app de origen.
 - La identidad de app dentro de carpetas es `package|user`, sin actividad; varias actividades del mismo paquete se colapsan.
 - Las referencias a apps desinstaladas o shortcuts desanclados se toleran y se ignoran hasta que vuelvan a existir.
-- Las cadenas nuevas de carpetas solo están traducidas a inglés y español; el resto usa inglés.
-- El código temporal de migración/exportación/importación fue eliminado.
+- Las cadenas nuevas de carpetas y de backup solo están traducidas a inglés y español; el resto usa inglés.
+- El backup/restore es manual y no cifrado; el JSON contiene ajustes, apps ocultas, carpetas y referencias. No se hace copia automática previa al restore.
+- El backup restaura también flags internos y transitorios (`FIRST_OPEN`, `USER_STATE`, timestamps, avisos mostrados), por lo que el estado de onboarding del backup se traslada al destino.
+- No se copian los pinned-shortcuts reales, la imagen del wallpaper ni el estado de WorkManager; el wallpaper diario se reprograma si el backup lo activa.
 - No hay benchmark formal del renderizado de carpetas; la mejora se basa en eliminar el escaneo completo y las entregas duplicadas.
 
 ## 12. Regla final de mantenimiento

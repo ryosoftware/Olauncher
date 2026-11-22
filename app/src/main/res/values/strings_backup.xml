@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="backup_restore">Backup &amp; restore</string>
+    <string name="backup_settings">Back up settings</string>
+    <string name="restore_settings">Restore settings</string>
+    <string name="backup_saved">Backup saved</string>
+    <string name="backup_failed">Could not save the backup</string>
+    <string name="backup_invalid">Invalid backup file</string>
+    <string name="restore_confirm_title">Restore settings</string>
+    <string name="restore_confirm_message">This will replace your current settings and folders with the backup. Continue?</string>
+    <string name="restore_settings_action">Restore</string>
+    <string name="restore_done">Settings restored</string>
+    <string name="restore_failed">Could not restore the backup</string>
+    <string name="cancel">Cancel</string>
+</resources>

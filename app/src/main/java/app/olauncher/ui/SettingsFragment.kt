@@ -23,6 +23,7 @@ import androidx.navigation.fragment.findNavController
 import app.olauncher.BuildConfig
 import app.olauncher.MainViewModel
 import app.olauncher.R
+import app.olauncher.backup.BackupRestoreController
 import app.olauncher.data.Constants
 import app.olauncher.data.Prefs
 import app.olauncher.databinding.DialogNotWorkingBinding
@@ -59,6 +60,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
     private val binding get() = _binding!!
     private val showPentastic = System.currentTimeMillis() % 2 == 0L
     private var dialog: OlDialog? = null
+    private var backupRestoreController: BackupRestoreController? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
@@ -72,6 +74,7 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
             ViewModelProvider(this)[MainViewModel::class.java]
         } ?: throw Exception("Invalid Activity")
         viewModel.isOlauncherDefault()
+        backupRestoreController = BackupRestoreController(this, viewModel)
 
         deviceManager = requireContext().getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         componentName = ComponentName(requireContext(), DeviceAdmin::class.java)
@@ -193,6 +196,13 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
         binding.appThemeText.setOnClickListener(this)
         binding.textSizeValue.setOnClickListener(this)
         binding.boldFont.setOnClickListener(this)
+
+        binding.backupSection.backupSettings.setOnClickListener {
+            backupRestoreController?.backup()
+        }
+        binding.backupSection.restoreSettings.setOnClickListener {
+            backupRestoreController?.restore()
+        }
 
         binding.share.setOnClickListener(this)
         binding.rate.setOnClickListener(this)
@@ -709,6 +719,8 @@ class SettingsFragment : BaseFragment(), View.OnClickListener, View.OnLongClickL
         // Dismissing the text size dialog applies any pending scale via its dismiss listener
         dialog?.dismiss()
         dialog = null
+        backupRestoreController?.dismiss()
+        backupRestoreController = null
         applyTextSizeScale()
         super.onDestroyView()
         _binding = null

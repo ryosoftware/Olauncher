@@ -37,17 +37,17 @@ Configuración esperada:
 - `origin`: repositorio del fork personalizado.
 - `upstream`: repositorio original de Olauncher.
 
-### Estado actual (2026-11-13)
+### Estado actual (2026-11-22)
 
-- `origin`: `https://github.com/tanujnotes/Olauncher.git` (upstream).
-- No existe remoto `upstream` ni remoto del fork.
-- Rama `master` en `ea701c2`, 12 commits por delante de `2606973`.
-- Hay cambios locales sin commit: MOD-010 (teclado en carpetas) y MOD-011 (búsqueda recursiva).
+- `origin`: `https://github.com/ryosoftware/Olauncher.git` (fork).
+- No existe remoto `upstream`; el repositorio original es `https://github.com/tanujnotes/Olauncher.git`.
+- Rama `master` en `b3b8b86`, 18 commits por delante de `2606973`.
+- MOD-013 (backup/restore) está en el árbol de trabajo, sin commit.
 
 Antes de la primera sincronización:
 
-1. Renombrar `origin` a `upstream`.
-2. Añadir el repositorio del fork como `origin` cuando exista URL.
+1. Añadir el repositorio original como remoto `upstream`.
+2. Confirmar que `origin` sigue apuntando al fork.
 3. Confirmar que el árbol de trabajo está limpio o los cambios están preservados.
 
 Comandos de ejemplo:
@@ -242,6 +242,7 @@ Mantener un historial de las operaciones de sincronización.
 | Fecha | Commit de upstream | Commit del fork | Resultado | Observaciones |
 |---|---|---|---|---|
 | 2026-11-10 | `2606973` | `0dc1c57` | Sin sincronizar | Base del fork; 9 commits propios; hay cambios locales pendientes |
+| 2026-11-22 | `2606973` | `b3b8b86` + MOD-013 | Sin sincronizar | `origin` apunta al fork; falta añadir `upstream`; MOD-013 sin commit |
 
 ## 12. Recuperación y reversión
 
@@ -312,25 +313,33 @@ Esta regla se aplica también a los commits de merge y a cualquier otra operaci�
 
 Archivos de mayor riesgo de conflicto con upstream:
 
+- `ui/SettingsFragment.kt`
+- `MainActivity.kt`
 - `ui/AppDrawerAdapter.kt`
 - `ui/AppDrawerFragment.kt`
 - `ui/HomeFragment.kt`
 - `res/layout/adapter_app_drawer.xml`
 - `res/layout/fragment_app_drawer.xml` y `res/layout-land/fragment_app_drawer.xml`
+- `res/layout/fragment_settings.xml` y `res/layout-land/fragment_settings.xml`
 - `res/navigation/nav_graph.xml`
 
-El resto de la funcionalidad está aislado en `app/src/main/java/app/olauncher/folders/` y en
-recursos nuevos. Al sincronizar, revisar especialmente los enlaces con `AppModel`, `Prefs`,
-`MainViewModel` y el ciclo de vida de `MainActivity` (el launcher vuelve a Home en `onStop`).
+El resto de la funcionalidad está aislado en `app/src/main/java/app/olauncher/folders/`,
+`app/src/main/java/app/olauncher/backup/` y en recursos nuevos. Al sincronizar, revisar
+especialmente los enlaces con `AppModel`, `Prefs`, `MainViewModel` y el ciclo de vida de
+`MainActivity` (el launcher vuelve a Home en `onStop`).
 
 Estado de referencia para la validación:
 
-- 46 pruebas unitarias.
+- 54 pruebas unitarias.
 - `assembleDebug` correcto; `assembleRelease` correcto en la validación anterior.
-- Lint con 22 errores y 106 avisos preexistentes; sin hallazgos nuevos en carpetas ni en las
-  clases modificadas por MOD-010/MOD-011.
+- Lint con 22 errores y 107 avisos preexistentes; sin hallazgos nuevos en carpetas, backup ni en
+  las clases modificadas por MOD-010/MOD-011/MOD-012/MOD-013.
 - Búsqueda recursiva en carpetas y subcarpetas; barra visible dentro de carpetas.
 - Teclado automático en carpetas controlado por `FOLDERS_SHOW_KEYBOARD_IN_FOLDERS` (por defecto
   `false`) además de `autoShowKeyboard`.
+- Backup/restore manual en JSON que copia todo `SharedPreferences` (`FOLDERS_DATA` incluido) y
+  sustituye la configuración al restaurar.
+- El selector SAF de backup/restore usa `MainActivity.setKeepScreenOnStop` para que `onStop` no
+  devuelva a Home mientras el fragmento espera el resultado.
 - Pinned-shortcuts: Android solo entrega al launcher los fijados por él mismo.
 

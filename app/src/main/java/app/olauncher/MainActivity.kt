@@ -60,6 +60,7 @@ class MainActivity : AppCompatActivity() {
     private var profileReceiver: BroadcastReceiver? = null
     private var launcherAppsCallback: LauncherApps.Callback? = null
     private var messageDialog: OlDialog? = null
+    private var keepScreenOnStop = false
 
 //    override fun onBackPressed() {
 //        if (navController.currentDestination?.id != R.id.mainFragment)
@@ -127,6 +128,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        keepScreenOnStop = false
         restartLauncherOrCheckTheme()
     }
 
@@ -168,12 +170,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         isResumed = false
-        backToHomeScreen()
+        if (!keepScreenOnStop) backToHomeScreen()
         super.onStop()
     }
 
     override fun onUserLeaveHint() {
-        backToHomeScreen()
+        if (!keepScreenOnStop) backToHomeScreen()
         super.onUserLeaveHint()
     }
 
@@ -348,6 +350,14 @@ class MainActivity : AppCompatActivity() {
         messageDialog?.dismiss()
         if (navController.currentDestination?.id != R.id.mainFragment)
             navController.popBackStack(R.id.mainFragment, false)
+    }
+
+    /**
+     * Evita que [onStop] devuelva la actividad a Home mientras un selector externo (SAF) está
+     * abierto, para no destruir el fragmento que espera el resultado.
+     */
+    internal fun setKeepScreenOnStop(keep: Boolean) {
+        keepScreenOnStop = keep
     }
 
     private fun setPlainWallpaper() {

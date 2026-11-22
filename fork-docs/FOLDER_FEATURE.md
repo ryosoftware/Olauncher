@@ -706,7 +706,7 @@ Si durante el desarrollo se acuerda modificar algún comportamiento:
 
 ---
 
-# Anexo: estado de implementación en este fork (2026-11-10)
+# Anexo: estado de implementación en este fork (2026-11-22)
 
 Este anexo describe cómo se ha implementado la especificación y las diferencias conscientes
 respecto al texto original. La especificación sigue siendo la referencia funcional.
@@ -728,6 +728,9 @@ respecto al texto original. La especificación sigue siendo la referencia funcio
   «New folder» como último elemento.
 - El contenido de carpeta se resuelve con `currentAppList` y las apps ocultas del `ViewModel`, sin
   volver a ejecutar un escaneo completo de aplicaciones.
+- El backup/restore manual de ajustes copia el `SharedPreferences` completo, por lo que incluye
+  `FOLDERS_DATA`, las políticas de carpetas y los slots de escritorio/swipe que actúan como
+  referencias externas. Al restaurar, `FolderRepository` reconcilia esas referencias al cargar.
 
 ## Diferencias o decisiones de producto
 
@@ -759,18 +762,21 @@ respecto al texto original. La especificación sigue siendo la referencia funcio
 - La pila de navegación no se conserva ante recreación por cambio de configuración.
 - Las referencias a apps desinstaladas o shortcuts desanclados se toleran y se ignoran.
 - Solo hay traducciones nuevas en inglés y español; el resto de locales usa inglés.
-- Persisten 22 errores de lint preexistentes ajenos a las carpetas.
+- Persisten 22 errores y 107 avisos de lint preexistentes ajenos a las carpetas.
 
 ## Pruebas
 
-- 46 pruebas unitarias, incluidas las de recorrido de subárboles para la búsqueda.
-- `assembleDebug` correcto tras MOD-010/MOD-011; `assembleRelease` correcto en la validación
+- 54 pruebas unitarias, incluidas las de recorrido de subárboles para la búsqueda y las de
+  serialización del backup.
+- `assembleDebug` correcto tras MOD-012 y MOD-013; `assembleRelease` correcto en la validación
   anterior.
 - Pruebas manuales de creación, selección, anidamiento, renombrado, retirada, escritorio, swipe,
   persistencia y navegación.
-- Pendiente una pasada completa de aceptación y la validación manual de MOD-010 y MOD-011.
+- Pendiente una pasada completa de aceptación, la validación manual de MOD-010/MOD-011 y las
+  pruebas manuales de backup/restore.
 
 ## Commits de referencia
 
 `7a7eb43`, `163128b`, `095ba5c`, `452cd3d`, `2b6c64f`, `c55f5a9`, `dac1090`, `6fc1019`,
-`0dc1c57`, `c1ea348`. MOD-010 y MOD-011 están pendientes de commit.
+`0dc1c57`, `c1ea348`, `3836b32` (MOD-010/MOD-011), `5719143` (MOD-012), `b3b8b86` (documentación).
+MOD-013 está pendiente de commit.

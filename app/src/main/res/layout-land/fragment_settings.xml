@@ -506,6 +506,13 @@
                 -->
             </LinearLayout>
 
+            <include
+                android:id="@+id/backupSection"
+                layout="@layout/settings_backup_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="12dp" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
